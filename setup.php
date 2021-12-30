@@ -1,6 +1,6 @@
 <?php
 /**
- * @version $Id: setup.php 558 2020-09-03 08:40:26Z yllen $
+ * @version $Id: setup.php 568 2021-03-23 13:53:48Z yllen $
  -------------------------------------------------------------------------
  LICENSE
 
@@ -21,7 +21,7 @@
 
  @package   pdf
  @authors   Nelly Mahu-Lasson, Remi Collet
- @copyright Copyright (c) 2009-2020 PDF plugin team
+ @copyright Copyright (c) 2009-2021 PDF plugin team
  @license   AGPL License 3.0 or (at your option) any later version
             http://www.gnu.org/licenses/agpl-3.0-standalone.html
  @link      https://forge.glpi-project.org/projects/pdf
@@ -66,6 +66,7 @@ function plugin_init_pdf() {
       $PLUGIN_HOOKS['plugin_pdf']['ConsumableItem']   = 'PluginPdfConsumableItem';
       $PLUGIN_HOOKS['plugin_pdf']['Change']           = 'PluginPdfChange';
       $PLUGIN_HOOKS['plugin_pdf']['Computer']         = 'PluginPdfComputer';
+      $PLUGIN_HOOKS['plugin_pdf']['Contract']         = 'PluginPdfContract';
       $PLUGIN_HOOKS['plugin_pdf']['Group']            = 'PluginPdfGroup';
       $PLUGIN_HOOKS['plugin_pdf']['KnowbaseItem']     = 'PluginPdfKnowbaseItem';
       $PLUGIN_HOOKS['plugin_pdf']['Monitor']          = 'PluginPdfMonitor';
@@ -92,7 +93,7 @@ function plugin_init_pdf() {
 function plugin_version_pdf() {
 
    return ['name'           => __('Print to pdf', 'pdf'),
-           'version'        => '1.7.0',
+           'version'        => '2.0.0',
            'author'         => 'Remi Collet, Nelly Mahu-Lasson',
            'license'        => 'GPLv3+',
            'homepage'       => 'https://forge.glpi-project.org/projects/pdf',

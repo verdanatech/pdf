@@ -1,6 +1,6 @@
 <?php
 /**
- * @version $Id: computer_softwareversion.class.php 550 2020-08-26 13:13:56Z yllen $
+ * @version $Id: setup.php 378 2014-06-08 15:12:45Z yllen $
  -------------------------------------------------------------------------
  LICENSE
 

@@ -1,6 +1,6 @@
 <?php
 /**
- * @version $Id: remote.class.php 558 2020-09-03 08:40:26Z yllen $
+ * @version $Id: remote.class.php 568 2021-03-23 13:53:48Z yllen $
  -------------------------------------------------------------------------
  LICENSE
 

@@ -1,6 +1,6 @@
 <?php
 /**
- * @version $Id: preference.class.php 558 2020-09-03 08:40:26Z yllen $
+ * @version $Id: preference.class.php 568 2021-03-23 13:53:48Z yllen $
  -------------------------------------------------------------------------
  LICENSE
 
@@ -89,7 +89,7 @@ class PluginPdfPreference extends CommonDBTM {
          return;
       }
       $itempdf = new $PLUGIN_HOOKS['plugin_pdf'][$type]($item);
-      $options = $itempdf->defineAllTabs();
+      $options = $itempdf->defineAllTabsPDF();
 
       $formid="plugin_pdf_${type}_".mt_rand();
       echo "<form name='".$formid."' id='".$formid."' action='$action' method='post' ".

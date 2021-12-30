@@ -1,6 +1,6 @@
 <?php
 /**
- * @version $Id: peripheral.class.php 558 2020-09-03 08:40:26Z yllen $
+ * @version $Id: peripheral.class.php 568 2021-03-23 13:53:48Z yllen $
  -------------------------------------------------------------------------
  LICENSE
 
@@ -41,9 +41,9 @@ class PluginPdfPeripheral extends PluginPdfCommon {
    }
 
 
-   function defineAllTabs($options=[]) {
+   function defineAllTabsPDF($options=[]) {
 
-      $onglets = parent::defineAllTabs($options);
+      $onglets = parent::defineAllTabsPDF($options);
       unset($onglets['Certificate_Item$1']);
       unset($onglets['Impact$1']);
       unset($onglets['Appliance_Item$1']);

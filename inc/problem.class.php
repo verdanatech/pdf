@@ -1,6 +1,6 @@
 <?php
 /**
- * @version $Id: problem.class.php 558 2020-09-03 08:40:26Z yllen $
+ * @version $Id: problem.class.php 568 2021-03-23 13:53:48Z yllen $
  -------------------------------------------------------------------------
  LICENSE
 
@@ -518,9 +518,9 @@ class PluginPdfProblem extends PluginPdfCommon {
    }
 
 
-   function defineAllTabs($options=[]) {
+   function defineAllTabsPDF($options=[]) {
 
-      $onglets = parent::defineAllTabs($options);
+      $onglets = parent::defineAllTabsPDF($options);
       unset($onglets['Itil_Project$1']);
       unset($onglets['Impact$1']);
 

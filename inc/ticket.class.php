@@ -1,6 +1,6 @@
 <?php
 /**
- * @version $Id: ticket.class.php 558 2020-09-03 08:40:26Z yllen $
+ * @version $Id: ticket.class.php 568 2021-03-23 13:53:48Z yllen $
  -------------------------------------------------------------------------
  LICENSE
 
@@ -21,7 +21,7 @@
 
  @package   pdf
  @authors   Nelly Mahu-Lasson, Remi Collet
- @copyright Copyright (c) 2009-2020 PDF plugin team
+ @copyright Copyright (c) 2009-2021 PDF plugin team
  @license   AGPL License 3.0 or (at your option) any later version
             http://www.gnu.org/licenses/agpl-3.0-standalone.html
  @link      https://forge.glpi-project.org/projects/pdf
@@ -432,7 +432,7 @@ class PluginPdfTicket extends PluginPdfCommon {
       if (in_array($job->fields["status"], $job->getClosedStatusArray())) {
          if ($job->fields['close_delay_stat'] > 0) {
             $pdf->displayLine(__('Closing'),
-                              Html::clean(Html::timestampToString($job->fields['close_delay_stat'],0)));
+                              Html::clean(Html::timestampToString($job->fields['close_delay_stat'],1)));
          }
       }
       if ($job->fields['waiting_duration'] > 0) {
@@ -444,9 +444,9 @@ class PluginPdfTicket extends PluginPdfCommon {
    }
 
 
-   function defineAllTabs($options=[]) {
+   function defineAllTabsPDF($options=[]) {
 
-      $onglets = parent::defineAllTabs($options);
+      $onglets = parent::defineAllTabsPDF($options);
       unset($onglets['ProjectTask_Ticket$1']);
       unset($onglets['Itil_Project$1']);
 
