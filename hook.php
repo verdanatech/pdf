@@ -1,6 +1,5 @@
 <?php
 /**
- * @version $Id: hook.php 568 2021-03-23 13:53:48Z yllen $
  -------------------------------------------------------------------------
  LICENSE
 
@@ -21,7 +20,7 @@
 
  @package   pdf
  @authors   Nelly Mahu-Lasson, Remi Collet
- @copyright Copyright (c) 2009-2021 PDF plugin team
+ @copyright Copyright (c) 2009-2022 PDF plugin team
  @license   AGPL License 3.0 or (at your option) any later version
             http://www.gnu.org/licenses/agpl-3.0-standalone.html
  @link      https://forge.glpi-project.org/projects/pdf
@@ -61,7 +60,7 @@ function plugin_pdf_install() {
    //new install
    if (!$DB->tableExists('glpi_plugin_pdf_profiles')
        && !$DB->tableExists('glpi_plugin_pdf_preferences')) {
-      include_once(Plugin::getPhpDir('pdf')."inc/profile.class.php");
+      include_once(Plugin::getPhpDir('pdf')."/inc/profile.class.php");
       PluginPdfProfile::install($migration);
 
    } else {
@@ -139,7 +138,7 @@ function plugin_pdf_install() {
    }
 
    if (!$DB->tableExists('glpi_plugin_pdf_configs')) {
-      include_once(Plugin::getPhpDir('pdf')."inc/config.class.php");
+      include_once(Plugin::getPhpDir('pdf')."/inc/config.class.php");
       PluginPdfConfig::install($migration);
    }
 
@@ -169,7 +168,7 @@ function plugin_pdf_uninstall() {
    $DB->queryOrDie($query, $DB->error());
 
    if ($DB->tableExists('glpi_plugin_pdf_configs')) {
-      include_once(Plugin::getPhpDir('pdf')."inc/config.class.php");
+      include_once(Plugin::getPhpDir('pdf')."/inc/config.class.php");
       PluginPdfConfig::uninstall($migration);
    }
 

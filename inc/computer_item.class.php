@@ -1,6 +1,5 @@
 <?php
 /**
- * @version $Id: computer_item.class.php 568 2021-03-23 13:53:48Z yllen $
  -------------------------------------------------------------------------
  LICENSE
 
@@ -21,7 +20,7 @@
 
  @package   pdf
  @authors   Nelly Mahu-Lasson, Remi Collet
- @copyright Copyright (c) 2009-2021 PDF plugin team
+ @copyright Copyright (c) 2009-2022 PDF plugin team
  @license   AGPL License 3.0 or (at your option) any later version
             http://www.gnu.org/licenses/agpl-3.0-standalone.html
  @link      https://forge.glpi-project.org/projects/pdf
@@ -53,7 +52,7 @@ class PluginPdfComputer_Item extends PluginPdfCommon {
                 'Peripheral' => _n('Device', 'Devices', 2),
                 'Phone'      => _n('Phone', 'Phones', 2)];
 
-      $info = new InfoCom();
+      $info = new Infocom();
 
       $pdf->setColumnsSize(100);
       $pdf->displayTitle('<b>'.__('Direct connections').'</b>');
@@ -153,7 +152,7 @@ class PluginPdfComputer_Item extends PluginPdfCommon {
       $ID   = $item->getField('id');
       $type = $item->getType();
 
-      $info = new InfoCom();
+      $info = new Infocom();
       $comp = new Computer();
 
       $pdf->setColumnsSize(100);
