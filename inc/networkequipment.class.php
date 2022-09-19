@@ -1,6 +1,5 @@
 <?php
 /**
- * @version $Id: networkequipment.class.php 568 2021-03-23 13:53:48Z yllen $
  -------------------------------------------------------------------------
  LICENSE
 
@@ -21,7 +20,7 @@
 
  @package   pdf
  @authors   Nelly Mahu-Lasson, Remi Collet
- @copyright Copyright (c) 2009-2020 PDF plugin team
+ @copyright Copyright (c) 2009-2022 PDF plugin team
  @license   AGPL License 3.0 or (at your option) any later version
             http://www.gnu.org/licenses/agpl-3.0-standalone.html
  @link      https://forge.glpi-project.org/projects/pdf
@@ -49,6 +48,7 @@ class PluginPdfNetworkEquipment extends PluginPdfCommon {
       unset($onglets['Certificate_Item$1']);
       unset($onglets['Impact$1']);
       unset($onglets['Appliance_Item$1']);
+      unset($onglets['Glpi\Socket$1']);
       return $onglets;
    }
 
@@ -72,8 +72,8 @@ class PluginPdfNetworkEquipment extends PluginPdfCommon {
          '<b><i>'.sprintf(__('%1$s: %2$s'), __('User').'</i></b>',
                           $dbu->getUserName($item->fields['users_id'])),
          '<b><i>'.sprintf(__('%1$s: %2$s'), __('Network').'</i></b>',
-                          Html::clean(Dropdown::getDropdownName('glpi_networks',
-                                                                $item->fields['networks_id']))));
+                          Toolbox::stripTags(Dropdown::getDropdownName('glpi_networks',
+                                                                       $item->fields['networks_id']))));
 
       $pdf->displayLine(
          '<b><i>'.sprintf(__('%1$s: %2$s'), __('Group').'</i></b>',

@@ -1,6 +1,6 @@
 <?php
 /**
- * @version $Id: peripheral.class.php 568 2021-03-23 13:53:48Z yllen $
+ * @version $Id$
  -------------------------------------------------------------------------
  LICENSE
 
@@ -47,6 +47,7 @@ class PluginPdfPeripheral extends PluginPdfCommon {
       unset($onglets['Certificate_Item$1']);
       unset($onglets['Impact$1']);
       unset($onglets['Appliance_Item$1']);
+      unset($onglets['Glpi\Socket$1']);
       return $onglets;
    }
 

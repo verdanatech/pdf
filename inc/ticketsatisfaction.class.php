@@ -1,6 +1,6 @@
 <?php
 /**
- * @version $Id: ticketsatisfaction.class.php 568 2021-03-23 13:53:48Z yllen $
+ * @version $Id$
  -------------------------------------------------------------------------
  LICENSE
 

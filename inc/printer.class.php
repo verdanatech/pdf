@@ -1,6 +1,5 @@
 <?php
 /**
- * @version $Id: printer.class.php 568 2021-03-23 13:53:48Z yllen $
  -------------------------------------------------------------------------
  LICENSE
 
@@ -21,7 +20,7 @@
 
  @package   pdf
  @authors   Nelly Mahu-Lasson, Remi Collet
- @copyright Copyright (c) 2009-2021 PDF plugin team
+ @copyright Copyright (c) 2009-2022 PDF plugin team
  @license   AGPL License 3.0 or (at your option) any later version
             http://www.gnu.org/licenses/agpl-3.0-standalone.html
  @link      https://forge.glpi-project.org/projects/pdf
@@ -46,11 +45,15 @@ class PluginPdfPrinter extends PluginPdfCommon {
       unset($onglets['Certificate_Item$1']);
       unset($onglets['Impact$1']);
       unset($onglets['Appliance_Item$1']);
+      unset($onglets['PrinterLog$0']);
+      unset($onglets['Glpi\Socket$1']);
       return $onglets;
    }
 
 
    static function pdfMain(PluginPdfSimplePDF $pdf, Printer $printer) {
+
+      $dbu = new DbUtils();
 
        PluginPdfCommon::mainTitle($pdf, $printer);
 
@@ -62,12 +65,26 @@ class PluginPdfPrinter extends PluginPdfCommon {
        PluginPdfCommon::mainLine($pdf, $printer, 'contact-otherserial');
        PluginPdfCommon::mainLine($pdf, $printer, 'user-management');
 
+       $pdf->displayLine(
+          '<b><i>'.sprintf(__('%1$s: %2$s'), __('Sysdescr').'</i></b>',
+                           $printer->fields['sysdescr']),
+          '<b><i>'.sprintf(__('%1$s: %2$s'), __('User').'</i></b>',
+                           $dbu->getUserName($printer->fields['users_id'])));
+
+       $pdf->displayLine(
+          '<b><i>'.sprintf(__('%1$s: %2$s'), __('Management type').'</i></b>',
+                           ($printer->fields['is_global']?__('Global management')
+                                                         :__('Unit management'))),
+          '<b><i>'.sprintf(__('%1$s: %2$s'), __('Network').'</i></b>',
+                           Toolbox::stripTags(Dropdown::getDropdownName('glpi_networks',
+                                                                $printer->fields['networks_id']))));
+
       $pdf->displayLine(
          '<b><i>'.sprintf(__('%1$s: %2$s'), __('Group').'</i></b>',
                           Dropdown::getDropdownName('glpi_groups', $printer->fields['groups_id'])),
-        '<b><i>'.sprintf(__('%1$s: %2$s'), __('Network').'</i></b>',
-                         Html::clean(Dropdown::getDropdownName('glpi_networks',
-                                                                $printer->fields['networks_id']))));
+         '<b><i>'.sprintf(__('%1$s: %2$s'), __('UUID').'</i></b>',
+                          $printer->fields['uuid']));
+
 
       $pdf->displayLine(
          '<b><i>'.sprintf(__('%1$s: %2$s'), __('Memory').'</i></b>',

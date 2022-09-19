@@ -1,6 +1,5 @@
 <?php
 /**
- * @version $Id: setup.php 378 2014-06-08 15:12:45Z yllen $
  -------------------------------------------------------------------------
  LICENSE
 
@@ -21,7 +20,7 @@
 
  @package   pdf
  @authors   Nelly Mahu-Lasson, Remi Collet
- @copyright Copyright (c) 2009-2020 PDF plugin team
+ @copyright Copyright (c) 2009-2022 PDF plugin team
  @license   AGPL License 3.0 or (at your option) any later version
             http://www.gnu.org/licenses/agpl-3.0-standalone.html
  @link      https://forge.glpi-project.org/projects/pdf
@@ -37,7 +36,7 @@ class PluginPdfComputer_SoftwareVersion extends PluginPdfCommon {
 
 
    function __construct(CommonGLPI $obj=NULL) {
-      $this->obj = ($obj ? $obj : new Computer_SoftwareVersion());
+      $this->obj = ($obj ? $obj : new Item_SoftwareVersion());
    }
 
 
@@ -76,8 +75,9 @@ class PluginPdfComputer_SoftwareVersion extends PluginPdfCommon {
 
       $total = 0;
       if ($result = $DB->request($query_number)) {
-         $row = $result->next();
-         $total  = $row['cpt'];
+         foreach ($result as $row) {
+            $total  = $row['cpt'];
+         }
       }
 
       $query = "SELECT DISTINCT `glpi_computers_softwareversions`.*,
@@ -133,12 +133,13 @@ class PluginPdfComputer_SoftwareVersion extends PluginPdfCommon {
                             __('User'), _n('License', 'Licenses', 2),
                             __('Installation date').'</i></b>');
 
-         while ($data = $result->next()) {
+         foreach ($result as $data) {
             $compname = $data['compname'];
             if (empty($compname) || $_SESSION['glpiis_ids_visible']) {
                $compname = sprintf(__('%1$s (%2$s)'), $compname, $data['cID']);
             }
-            $lics = Computer_SoftwareLicense::GetLicenseForInstallation($data['cID'], $data['vID']);
+            $lics = Item_SoftwareLicense::GetLicenseForInstallation('Computer', $data['cID'],
+                                                                    $data['vID']);
 
             $tmp = [];
             if (count($lics)) {
@@ -184,7 +185,7 @@ class PluginPdfComputer_SoftwareVersion extends PluginPdfCommon {
 
       $lig = $tot = 0;
       if (in_array(0, $_SESSION["glpiactiveentities"])) {
-         $nb = Computer_SoftwareVersion::countForVersion($softwareversions_id,0);
+         $nb = Item_SoftwareVersion::countForVersion('Computer',$softwareversions_id,0);
          if ($nb > 0) {
             $pdf->displayLine(__('Root entity'), $nb);
             $tot += $nb;
@@ -197,7 +198,7 @@ class PluginPdfComputer_SoftwareVersion extends PluginPdfCommon {
               'ORDER'   => 'completename'];
 
       foreach ($DB->request($sql) as $ID => $data) {
-         $nb = Computer_SoftwareVersion::countForVersion($softwareversions_id,$ID);
+         $nb = Item_SoftwareVersion::countForVersion('Computer',$softwareversions_id,$ID);
          if ($nb > 0) {
             $pdf->displayLine($data["completename"], $nb);
             $tot += $nb;
@@ -350,7 +351,7 @@ class PluginPdfComputer_SoftwareVersion extends PluginPdfCommon {
             $lic .= '<b>'.$data['name'].'</b> '.$data['serial'];
             if (!empty($data['softwarelicensetypes_id'])) {
                $lic = sprintf(__('%1$s (%2$s)'), $lic,
-                              Html::Clean(Dropdown::getDropdownName('glpi_softwarelicensetypes',
+                              Toolbox::stripTags((Dropdown::getDropdownName('glpi_softwarelicensetypes',
                                                                    $data['softwarelicensetypes_id'])));
             }
             $pdf->displayLine($data['softname'], $data['state'], $data['version'], $lic);

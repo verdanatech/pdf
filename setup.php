@@ -1,6 +1,5 @@
 <?php
 /**
- * @version $Id: setup.php 568 2021-03-23 13:53:48Z yllen $
  -------------------------------------------------------------------------
  LICENSE
 
@@ -21,7 +20,7 @@
 
  @package   pdf
  @authors   Nelly Mahu-Lasson, Remi Collet
- @copyright Copyright (c) 2009-2021 PDF plugin team
+ @copyright Copyright (c) 2009-2022 PDF plugin team
  @license   AGPL License 3.0 or (at your option) any later version
             http://www.gnu.org/licenses/agpl-3.0-standalone.html
  @link      https://forge.glpi-project.org/projects/pdf
@@ -34,6 +33,9 @@ function plugin_init_pdf() {
    global $PLUGIN_HOOKS, $PDF_DEVICES;
 
    $PLUGIN_HOOKS['csrf_compliant']['pdf'] = true;
+
+   // manage autoload of tcppdf (glpi core now use mdpdf)
+   include_once(Plugin::getPhpDir('pdf') . "/vendor/autoload.php");
 
    Plugin::registerClass('PluginPdfConfig', ['addtabon' => 'Config']);
    $PLUGIN_HOOKS['config_page']['pdf'] = 'front/config.form.php';
@@ -93,12 +95,12 @@ function plugin_init_pdf() {
 function plugin_version_pdf() {
 
    return ['name'           => __('Print to pdf', 'pdf'),
-           'version'        => '2.0.0',
+           'version'        => '2.1.0',
            'author'         => 'Remi Collet, Nelly Mahu-Lasson',
            'license'        => 'GPLv3+',
            'homepage'       => 'https://forge.glpi-project.org/projects/pdf',
-           'minGlpiVersion' => '9.5',
-           'requirements'   => ['glpi' => ['min' => '9.5',
-                                           'max' => '9.6']]];
+           'minGlpiVersion' => '10.0.0',
+           'requirements'   => ['glpi' => ['min' => '10.0.0',
+                                           'max' => '10.1.0']]];
 
 }

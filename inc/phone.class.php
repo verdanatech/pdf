@@ -1,6 +1,6 @@
 <?php
 /**
- * @version $Id: phone.class.php 568 2021-03-23 13:53:48Z yllen $
+ * @version $Id$
  -------------------------------------------------------------------------
  LICENSE
 
@@ -47,6 +47,8 @@ class PluginPdfPhone extends PluginPdfCommon {
       $onglets = parent::defineAllTabsPDF($options);
       unset($onglets['Appliance_Item$1']);
       unset($onglets['Impact$1']);
+      unset($onglets['Glpi\Socket$1']);
+      unset($onglets['Item_RemoteManagement$1']);
       return $onglets;
    }
 
@@ -67,8 +69,8 @@ class PluginPdfPhone extends PluginPdfCommon {
       $pdf->displayLine(
          '<b><i>'.sprintf(__('%1$s: %2$s'), __('Group').'</i></b>',
                           Dropdown::getDropdownName('glpi_groups', $item->fields['groups_id'])),
-         '<b><i>'.sprintf(__('%1$s: %2$s'), __('Power supply').'</i></b>',
-                          Dropdown::getYesNo($item->fields['phonepowersupplies_id'])));
+         '<b><i>'.sprintf(__('%1$s: %2$s'), __('UUID').'</i></b>',
+                          $item->fields['uuid']));
 
       $pdf->displayLine(
          '<b><i>'.sprintf(__('%1$s: %2$s'), __('Brand').'</i></b>', $item->fields['brand']),
@@ -83,9 +85,11 @@ class PluginPdfPhone extends PluginPdfCommon {
          }
       }
 
-      $pdf->setColumnsSize(100);
-      $pdf->displayLine('<b><i>'.sprintf(__('%1$s: %2$s'), __('Flags').'</i></b>',
-                        (count($opts) ? implode(', ',$opts) : __('None'))));
+      $pdf->displayLine(
+            '<b><i>'.sprintf(__('%1$s: %2$s'), __('Power supply').'</i></b>',
+                  Dropdown::getYesNo($item->fields['phonepowersupplies_id'])),
+            '<b><i>'.sprintf(__('%1$s: %2$s'), __('Flags').'</i></b>',
+                             (count($opts) ? implode(', ',$opts) : __('None'))));
 
       PluginPdfCommon::mainLine($pdf, $item, 'comment');
 

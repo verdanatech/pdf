@@ -1,6 +1,5 @@
 <?php
 /**
- * @version $Id: problem_ticket.class.php 568 2021-03-23 13:53:48Z yllen $
  -------------------------------------------------------------------------
  LICENSE
 
@@ -21,7 +20,7 @@
 
  @package   pdf
  @authors   Nelly Mahu-Lasson, Remi Collet
- @copyright Copyright (c) 2009-2020 PDF plugin team
+ @copyright Copyright (c) 2009-2022 PDF plugin team
  @license   AGPL License 3.0 or (at your option) any later version
             http://www.gnu.org/licenses/agpl-3.0-standalone.html
  @link      https://forge.glpi-project.org/projects/pdf
@@ -77,7 +76,7 @@ class PluginPdfProblem_Ticket extends PluginPdfCommon {
                $number));
 
          $job = new Problem();
-         while ($data = $result->next()) {
+         foreach ($result as $data) {
             if (!$job->getFromDB($data["id"])) {
                continue;
             }
@@ -255,7 +254,7 @@ class PluginPdfProblem_Ticket extends PluginPdfCommon {
                $number));
 
          $job = new Ticket();
-         while ($data = $result->next()) {
+         foreach ($result as $data) {
             if (!$job->getFromDB($data["id"])) {
                continue;
             }
@@ -390,7 +389,7 @@ class PluginPdfProblem_Ticket extends PluginPdfCommon {
 
             $item_col = '';
             $item_ticket = new Item_Ticket();
-            $data = $item_ticket->find("`tickets_id` = ".$job->fields['id']);
+            $data = $item_ticket->find(['tickets_id' => $job->fields['id']]);
             foreach ($data as $val) {
                if (!empty($val["itemtype"]) && ($val["items_id"] > 0)) {
                   if ($object = $dbu->getItemForItemtype($val["itemtype"])) {

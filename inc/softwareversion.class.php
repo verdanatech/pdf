@@ -1,6 +1,5 @@
 <?php
 /**
- * @version $Id: softwareversion.class.php 568 2021-03-23 13:53:48Z yllen $
  -------------------------------------------------------------------------
  LICENSE
 
@@ -21,7 +20,7 @@
 
  @package   pdf
  @authors   Nelly Mahu-Lasson, Remi Collet
- @copyright Copyright (c) 2009-2020 PDF plugin team
+ @copyright Copyright (c) 2009-2022 PDF plugin team
  @license   AGPL License 3.0 or (at your option) any later version
             http://www.gnu.org/licenses/agpl-3.0-standalone.html
  @link      https://forge.glpi-project.org/projects/pdf
@@ -54,16 +53,16 @@ class PluginPdfSoftwareVersion extends PluginPdfCommon {
       $pdf->displayLine(
          '<b><i>'.sprintf(__('%1$s: %2$s'), __('Name').'</i></b>', $version->fields['name']),
          '<b><i>'.sprintf(__('%1$s: %2$s'), _n('Software', 'Software', 2).'</i></b>',
-                          Html::clean(Dropdown::getDropdownName('glpi_softwares',
-                                                                $version->fields['softwares_id']))));
+                          Toolbox::stripTags(Dropdown::getDropdownName('glpi_softwares',
+                                                                       $version->fields['softwares_id']))));
 
       $pdf->displayLine(
          '<b><i>'.sprintf(__('%1$s: %2$s'), __('Status').'</i></b>',
-                          Html::clean(Dropdown::getDropdownName('glpi_states',
-                                                                $version->fields['states_id']))),
+                          Toolbox::stripTags(Dropdown::getDropdownName('glpi_states',
+                                                                       $version->fields['states_id']))),
          '<b><i>'.sprintf(__('%1$s: %2$s'), __('Operating system').'</i></b>',
-                          Html::clean(Dropdown::getDropdownName('glpi_operatingsystems',
-                                                                $version->fields['operatingsystems_id']))));
+                          Toolbox::stripTags(Dropdown::getDropdownName('glpi_operatingsystems',
+                                                                       $version->fields['operatingsystems_id']))));
 
       $pdf->setColumnsSize(100);
       PluginPdfCommon::mainLine($pdf, $version, 'comment');
@@ -113,11 +112,13 @@ class PluginPdfSoftwareVersion extends PluginPdfCommon {
                             '<b><i>'.__('Comments').'</i></b>');
          $pdf->setColumnsAlign('left','left','left','right','left');
 
-         for ($tot=$nb=0 ; $data=$result->next() ; $tot+=$nb) {
+         $tot = 0;
+         foreach ($result as $data) {
             $nb = Item_SoftwareVersion::countForVersion($data['id']);
             $pdf->displayLine((empty($data['name'])?"(".$data['id'].")":$data['name']),
                               $data['sname'], $data['osname'], $nb,
                               str_replace(["\r","\n"]," ",$data['comment']));
+            $tot+=$nb;
          }
          $pdf->setColumnsAlign('left','right','left', 'right','left');
          $pdf->displayTitle('','',"<b>".sprintf(__('%1$s: %2$s'), __('Total')."</b>", ''),$tot, '');
