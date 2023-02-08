@@ -1,4 +1,5 @@
 <?php
+
 /**
  -------------------------------------------------------------------------
  LICENSE
@@ -27,14 +28,15 @@
  @link      http://www.glpi-project.org/
  @since     2009
  --------------------------------------------------------------------------
-*/
+ */
 
 //use TCPDF;
 
-define ('K_PATH_IMAGES', Plugin::getPhpDir('pdf').'/pics/');
+define('K_PATH_IMAGES', Plugin::getPhpDir('pdf') . '/pics/');
 
 
-class PluginPdfSimplePDF {
+class PluginPdfSimplePDF
+{
 
    // Page orientation
    const PORTRAIT  = 'P';
@@ -51,7 +53,7 @@ class PluginPdfSimplePDF {
    private $width;
    private $height;
    private $start_tab;
-   private $header='';
+   private $header = '';
 
    // Columns management
    private $cols  = [];
@@ -65,13 +67,14 @@ class PluginPdfSimplePDF {
     *
     * @param $format    (default a4)
     * @param $orient    (default portrait)
-   **/
-   function __construct ($format='A4', $orient='') {
+    **/
+   function __construct($format = 'A4', $orient = '')
+   {
 
       /* Compat with 0.84 */
-      if (empty($orient) || $orient=='portrait') {
+      if (empty($orient) || $orient == 'portrait') {
          $orient = self::PORTRAIT;
-      } else if ($orient=='landscape') {
+      } else if ($orient == 'landscape') {
          $orient = self::LANDSCAPE;
       }
       $format = strtoupper($format);
@@ -87,8 +90,8 @@ class PluginPdfSimplePDF {
          $font       = $_SESSION['glpipdffont'];
          //$subsetting = false;
       }
-      $pdf->setHeaderFont(Array($font, 'B', 8));
-      $pdf->setFooterFont(Array($font, 'B', 8));
+      $pdf->setHeaderFont(array($font, 'B', 8));
+      $pdf->setFooterFont(array($font, 'B', 8));
 
       //set margins
       $pdf->SetMargins(10, 20, 10);
@@ -115,8 +118,9 @@ class PluginPdfSimplePDF {
     * Set the title in each header
     *
     * @param $msg
-   **/
-   public function setHeader($msg) {
+    **/
+   public function setHeader($msg)
+   {
 
       $this->header = $msg;
       $this->pdf->resetHeaderTemplate();
@@ -124,13 +128,13 @@ class PluginPdfSimplePDF {
       $configurationValues = Config::getConfigurationValues('core', ['version']);
       $current_version     = $configurationValues['version'];
       switch ($current_version) {
-         case "0.85.3" :
-         case "0.85.4" :
-         case "0.85.5" :
+         case "0.85.3":
+         case "0.85.4":
+         case "0.85.5":
             $this->pdf->SetHeaderData('fd_logo.jpg', 15, $msg, '');
             break;
 
-         default :
+         default:
             $this->pdf->SetHeaderData('fd_logo.png', 15, $msg, '');
       }
    }
@@ -138,8 +142,10 @@ class PluginPdfSimplePDF {
 
    /**
     * Display the result in the browser
-   **/
-   public function render() {
+    **/
+   public function render()
+   {
+      ob_end_clean();
       $this->pdf->Output('glpi.pdf', 'I');
    }
 
@@ -150,20 +156,24 @@ class PluginPdfSimplePDF {
     * @param $name String optional filename
     *
     * @return String with PDF content if filename not provided
-   **/
-   public function output($name=false) {
+    **/
+   public function output($name = false)
+   {
 
       if (!$name) {
+         ob_end_clean();
          return $this->pdf->Output('glpi.pdf', 'S');
       }
+      ob_end_clean();
       $this->pdf->Output($name, 'F');
    }
 
 
    /**
     * Start a new page
-   **/
-   public function newPage() {
+    **/
+   public function newPage()
+   {
       $this->pdf->AddPage();
    }
 
@@ -172,8 +182,9 @@ class PluginPdfSimplePDF {
     * Configure the width and number of colums
     *
     * @param list of size in % of the page width
-   **/
-   public function setColumnsSize() {
+    **/
+   public function setColumnsSize()
+   {
 
       $this->cols  = $tmp = func_get_args();
       $this->colsx = [];
@@ -181,13 +192,13 @@ class PluginPdfSimplePDF {
       $this->align = [];
 
       $x           = 10;
-      $w           = floor($this->width - 2*count($tmp));
+      $w           = floor($this->width - 2 * count($tmp));
 
       while ($rel = array_shift($tmp)) {
-         $z             = $w*$rel/100;
+         $z             = $w * $rel / 100;
          $this->colsx[] = $x;
          $this->colsw[] = $z;
-         $x             += $z+2;
+         $x             += $z + 2;
       }
    }
 
@@ -196,16 +207,23 @@ class PluginPdfSimplePDF {
     * Configure the width and number of colums
     *
     * @param list of alignment
-   **/
-   public function setColumnsAlign () {
+    **/
+   public function setColumnsAlign()
+   {
 
       $this->align = func_get_args();
       /* compat with 0.84 */
       foreach ($this->align as $k => $v) {
-         switch($v) {
-            case 'left':   $this->align[$k] = self::LEFT;   break;
-            case 'right':  $this->align[$k] = self::RIGHT;  break;
-            case 'center': $this->align[$k] = self::CENTER; break;
+         switch ($v) {
+            case 'left':
+               $this->align[$k] = self::LEFT;
+               break;
+            case 'right':
+               $this->align[$k] = self::RIGHT;
+               break;
+            case 'center':
+               $this->align[$k] = self::CENTER;
+               break;
          }
       }
    }
@@ -217,8 +235,9 @@ class PluginPdfSimplePDF {
     * @deprecated, no more used (should have be private)
     *
     * @param $gray
-   **/
-   public function displayBox($gray) {
+    **/
+   public function displayBox($gray)
+   {
       Toolbox::displayBox("PluginPdfSimplePDF::displayBox() is deprecated");
    }
 
@@ -231,8 +250,9 @@ class PluginPdfSimplePDF {
     * @param $defalign String  default column alignment is not set (setColumnsAlign)
     * @param $miny     Float   minimum size of the row (mm)
     * @param $msgs     Array   of strings to display
-   **/
-   private function displayInternal($gray, $padd, $defalign, $miny, $msgs) {
+    **/
+   private function displayInternal($gray, $padd, $defalign, $miny, $msgs)
+   {
 
       $this->pdf->SetFillColor($gray, $gray, $gray);
       $this->pdf->SetCellPadding($padd);
@@ -243,7 +263,7 @@ class PluginPdfSimplePDF {
       $this->pdf->startTransaction();
       $i = 0;
       foreach ($msgs as $msg) {
-         if ($i<count($this->cols)) {
+         if ($i < count($this->cols)) {
             $this->pdf->writeHTMLCell(
                $this->colsw[$i], // $w (float) Cell width. If 0, the cell extends up to the right margin.
                $miny,            // $h (float) Cell minimum height. The cell extends automatically if needed.
@@ -270,8 +290,8 @@ class PluginPdfSimplePDF {
       /* real run */
       $i = 0;
       foreach ($msgs as $msg) {
-         if ($i<count($this->cols)) {
-            if (($i+1)<count($msgs) && ($i+1)<count($this->cols)) {
+         if ($i < count($this->cols)) {
+            if (($i + 1) < count($msgs) && ($i + 1) < count($this->cols)) {
                $ln = 0; // right
             } else {
                $ln = 1; // down
@@ -304,8 +324,9 @@ class PluginPdfSimplePDF {
     * display a Title row, centered with dark background
     *
     * @param list of strings, one string per column
-   **/
-   public function displayTitle() {
+    **/
+   public function displayTitle()
+   {
       $this->displayInternal(200, 1.0, self::CENTER, 1, func_get_args());
    }
 
@@ -314,8 +335,9 @@ class PluginPdfSimplePDF {
     * display a nomal row, default to left, with light background
     *
     * @param list of strings, one string per column
-   **/
-   public function displayLine() {
+    **/
+   public function displayLine()
+   {
       $this->displayInternal(240, 0.5, self::LEFT, 1, func_get_args());
    }
 
@@ -327,8 +349,9 @@ class PluginPdfSimplePDF {
     *
     * @param $name String displayed text
     * @param $URL  String link
-   **/
-   public function displayLink($name, $URL) {
+    **/
+   public function displayLink($name, $URL)
+   {
       $this->displayInternal(240, 0.5, self::LEFT, 1, [sprintf('<a href="%s">%s</a>', $URL, $name)]);
    }
 
@@ -340,19 +363,20 @@ class PluginPdfSimplePDF {
     * @param $content   string   of text display on right (multi-line)
     * @param $minline   integer  for minimum box size (default 3)
     * @param $maxline   interger for maximum box size (1 page = 80 lines) (default 100) (ignored)
-   **/
-   public function displayText($name, $content='', $minline=3, $maxline=100) {
+    **/
+   public function displayText($name, $content = '', $minline = 3, $maxline = 100)
+   {
 
       /* Save columns */
       $save = [$this->cols, $this->colsx, $this->colsw, $this->align];
 
       $this->setColumnsSize(100);
-      $text = $name.' '.$content;
+      $text = $name . ' ' . $content;
       $content  = Html::entity_decode_deep($text);
       if (!preg_match("/<br\s?\/?>/", $content) && !preg_match("/<p>/", $content)) {
          $content = nl2br($content);
       }
-      $this->displayInternal(240, 0.5, self::LEFT, $minline*5, [$content]);
+      $this->displayInternal(240, 0.5, self::LEFT, $minline * 5, [$content]);
       /* Restore */
       list(
          $this->cols,
@@ -360,7 +384,6 @@ class PluginPdfSimplePDF {
          $this->colsw,
          $this->align
       ) = $save;
-
    }
 
 
@@ -368,10 +391,11 @@ class PluginPdfSimplePDF {
     * Display space between row
     *
     * @param $nb     (default 1)
-   **/
-   public function displaySpace($nb=1) {
+    **/
+   public function displaySpace($nb = 1)
+   {
 
-      $this->pdf->Ln(4*$nb);
+      $this->pdf->Ln(4 * $nb);
    }
 
 
@@ -381,13 +405,14 @@ class PluginPdfSimplePDF {
     * @param $image String  path of the PNF file
     * @param $dst_w Intefer Width in Pixels
     * @param $dst_h Integer Height in Pixels
-   **/
-   public function addPngFromFile($image,$dst_w,$dst_h) {
+    **/
+   public function addPngFromFile($image, $dst_w, $dst_h)
+   {
 
       $w = $this->pdf->pixelsToUnits($dst_w);
       $h = $this->pdf->pixelsToUnits($dst_h);
 
-      if ($this->pdf->GetY()+$h-20 > $this->height) { /* autopagebreak seems broken */
+      if ($this->pdf->GetY() + $h - 20 > $this->height) { /* autopagebreak seems broken */
          $this->pdf->AddPage();
       }
       $this->pdf->Image(
@@ -399,6 +424,6 @@ class PluginPdfSimplePDF {
          'PNG' // type
       );
 
-      $this->pdf->SetY($this->pdf->GetY()+$h+2);
+      $this->pdf->SetY($this->pdf->GetY() + $h + 2);
    }
 }
