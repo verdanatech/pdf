@@ -30,6 +30,8 @@
  *  --------------------------------------------------------------------------
  */
 
+use Glpi\RichText\RichText;
+
 //use TCPDF;
 
 define('K_PATH_IMAGES', '');
@@ -49,8 +51,7 @@ class PluginPdfSimplePDF
     // Page management
     private $width;
     private $height;
-    private $start_tab;
-    private $header = '';
+    private $header = ''; // @phpstan-ignore-line - $header is never read, only written.
 
     // Columns management
     private $cols  = [];
@@ -78,8 +79,10 @@ class PluginPdfSimplePDF
 
         $pdf->SetCreator('GLPI');
         $pdf->SetAuthor('GLPI');
-        $font = 'dejavusans';
-        $fonsize = 8;
+        $font = 'helvetica';
+        if (isset($_SESSION['glpipdffont']) && $_SESSION['glpipdffont']) {
+            $font = $_SESSION['glpipdffont'];
+        }
 
         $pdf->setHeaderFont([$font, 'B', 8]);
         $pdf->setFooterFont([$font, 'B', 8]);
@@ -127,7 +130,7 @@ class PluginPdfSimplePDF
         ) {
             $this->pdf->SetHeaderData($hook['logo_path'], 15, $msg, '');
         } else {
-            $path = Plugin::getPhpDir('pdf') . '/pics/';
+            $path = Plugin::getPhpDir('pdf') . '/public/pics/';
             $this->pdf->SetHeaderData($path . 'fd_logo.png', 15, $msg, '');
         }
     }
@@ -145,7 +148,7 @@ class PluginPdfSimplePDF
      *
      * @param $name String optional filename
      *
-     * @return String with PDF content if filename not provided
+     * @return string|void with PDF content if filename not provided
     **/
     public function output($name = false)
     {
@@ -166,7 +169,7 @@ class PluginPdfSimplePDF
     /**
      * Configure the width and number of colums
      *
-     * @param list of size in % of the page width
+     * param list of size in % of the page width
     **/
     public function setColumnsSize()
     {
@@ -189,7 +192,7 @@ class PluginPdfSimplePDF
     /**
      * Configure the width and number of colums
      *
-     * @param list of alignment
+     * param list of alignment
     **/
     public function setColumnsAlign()
     {
@@ -216,7 +219,7 @@ class PluginPdfSimplePDF
     **/
     public function displayBox($gray)
     {
-        Toolbox::displayBox('PluginPdfSimplePDF::displayBox() is deprecated');
+        Toolbox::deprecated('Calling this function is deprecated');
     }
 
     /**
@@ -273,7 +276,7 @@ class PluginPdfSimplePDF
                     $ln = 1; // down
                 }
                 $this->pdf->SetX($this->colsx[$i]);
-                $align = (isset($this->align[$i]) ? $this->align[$i] : $defalign);
+                $align = ($this->align[$i] ?? $defalign);
                 $this->pdf->writeHTMLCell(
                     $this->colsw[$i], // $w (float) Cell width. If 0, the cell extends up to the right margin.
                     $max,             // $h (float) Cell minimum height. The cell extends automatically if needed.
@@ -298,7 +301,7 @@ class PluginPdfSimplePDF
     /**
      * display a Title row, centered with dark background
      *
-     * @param list of strings, one string per column
+     * param list of strings, one string per column
     **/
     public function displayTitle()
     {
@@ -308,7 +311,7 @@ class PluginPdfSimplePDF
     /**
      * display a nomal row, default to left, with light background
      *
-     * @param list of strings, one string per column
+     * param list of strings, one string per column
     **/
     public function displayLine()
     {
@@ -343,18 +346,31 @@ class PluginPdfSimplePDF
 
         $this->setColumnsSize(100);
         $text    = $name . ' ' . $content;
-        $content = Html::entity_decode_deep($text);
-        if (!preg_match("/<br\s?\/?>/", $content) && !preg_match('/<p>/', $content)) {
-            $content = nl2br($content);
+        $content = RichText::getEnhancedHtml($text, ['text_maxsize' => 0]);
+
+        // Split content by tables, keeping tables in the result
+        $segments = preg_split('/(<table\b[^>]*>.*?<\/table>)/is', $content, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
+
+        // Process segments and rebuild content
+        $formatted_content = '';
+        foreach ($segments as $segment) {
+            if (str_contains($segment, '<table')) {
+                // Clean up table HTML for PDF rendering
+                $segment = $this->cleanTableHtml($segment);
+                $formatted_content .= $segment;
+            } else {
+                // Apply nl2br only to text segments
+                if (!str_contains($segment, '<br') && !str_contains($segment, '<p>')) {
+                    $segment = nl2br($segment);
+                }
+                $formatted_content .= $segment;
+            }
         }
-        $this->displayInternal(240, 0.5, self::LEFT, $minline * 5, [$content]);
+
+        $this->displayInternal(240, 0.5, self::LEFT, $minline * 5, [$formatted_content]);
+
         /* Restore */
-        list(
-            $this->cols,
-            $this->colsx,
-            $this->colsw,
-            $this->align,
-        ) = $save;
+        [$this->cols, $this->colsx, $this->colsw, $this->align, ] = $save;
     }
 
     /**
@@ -365,6 +381,44 @@ class PluginPdfSimplePDF
     public function displaySpace($nb = 1)
     {
         $this->pdf->Ln(4 * $nb);
+    }
+
+    /**
+     * Clean table HTML for proper PDF rendering
+     * Removes problematic attributes and styles that cause tables to overflow
+     *
+     * @param string $html Table HTML code
+     * @return string Cleaned HTML
+     */
+    private function cleanTableHtml($html)
+    {
+        // Remove colgroup entirely (causes fixed widths)
+        $html = preg_replace('/<colgroup\b[^>]*>.*?<\/colgroup>/is', '', $html);
+
+        // Remove table-layout:fixed style (prevents auto-sizing)
+        $html = preg_replace('/table-layout\s*:\s*fixed\s*;?/i', '', $html);
+
+        // Remove width/height styles only from table elements (table, td, th, tr)
+        $html = preg_replace('/(<(?:table|td|th|tr)\b[^>]*)\s+style\s*=\s*["\']([^"\']*)\bwidth\s*:\s*[^;"\'>]+;?([^"\']*)["\']/', '$1 style="$2$3"', $html);
+        $html = preg_replace('/(<(?:table|td|th|tr)\b[^>]*)\s+style\s*=\s*["\']([^"\']*)\bheight\s*:\s*[^;"\'>]+;?([^"\']*)["\']/', '$1 style="$2$3"', $html);
+
+        // Remove width/height attributes only from table elements (table, td, th, tr)
+        $html = preg_replace('/(<(?:table|td|th|tr)\b[^>]+)\s+width\s*=\s*["\']?[^"\'\s>]+["\']?/i', '$1', $html);
+        $html = preg_replace('/(<(?:table|td|th|tr)\b[^>]+)\s+height\s*=\s*["\']?[^"\'\s>]+["\']?/i', '$1', $html);
+
+        // Clean up empty style attributes and double spaces
+        $html = preg_replace('/\s+style\s*=\s*["\'][\s]*["\']/', '', $html);
+        $html = preg_replace('/\s+/', ' ', $html);
+
+        // Add border to table if missing (for visibility)
+        if (!preg_match('/border\s*=\s*["\']?[1-9]/i', $html)) {
+            $html = preg_replace('/<table/i', '<table border="1"', $html, 1);
+        }
+
+        // Force table to 100% width for PDF (do this LAST)
+        $html = preg_replace('/<table([^>]*)>/i', '<table$1 style="width:100%">', $html, 1);
+
+        return $html;
     }
 
     /**

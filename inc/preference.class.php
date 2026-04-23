@@ -30,15 +30,23 @@
  *  --------------------------------------------------------------------------
  */
 
+use Glpi\Application\View\TemplateRenderer;
+
 class PluginPdfPreference extends CommonDBTM
 {
     public static $rightname = 'plugin_pdf';
 
+    public static function getTypeName($nb = 0)
+    {
+        return __s('PDF export', 'pdf');
+    }
+
     public static function showPreferences()
     {
+        /** @var array $PLUGIN_HOOKS */
         global $PLUGIN_HOOKS;
 
-        $target = Toolbox::getItemTypeFormURL(__CLASS__);
+        $target = Toolbox::getItemTypeFormURL(self::class);
         $pref   = new self();
         $dbu    = new DbUtils();
 
@@ -55,27 +63,17 @@ class PluginPdfPreference extends CommonDBTM
     }
 
     /**
-     * @param $num
-     * @param $label
-     * @param $checked   (false by default)
-    **/
-    public function checkbox($num, $label, $checked = false)
-    {
-        echo "<td width='20%'><input type='checkbox' " . ($checked == true ? "checked='checked'" : '') .
-              " name='item[$num]' value='1'>&nbsp;" . $label . '</td>';
-    }
-
-    /**
      * @param $item
      * @param $action
     **/
     public function menu($item, $action)
     {
+        /** @var DBmysql $DB */
+        /** @var array $PLUGIN_HOOKS */
         global $DB, $PLUGIN_HOOKS;
 
         $type = $item->getType();
 
-        // $ID set if current object, not set from preference
         if (isset($item->fields['id'])) {
             $ID = $item->fields['id'];
         } else {
@@ -87,103 +85,61 @@ class PluginPdfPreference extends CommonDBTM
             || !class_exists($PLUGIN_HOOKS['plugin_pdf'][$type])) {
             return;
         }
-        $itempdf = new $PLUGIN_HOOKS['plugin_pdf'][$type]($item);
-        $options = $itempdf->defineAllTabsPDF();
 
-        $formid = "plugin_pdf_{$type}_" . mt_rand();
-        echo "<form name='" . $formid . "' id='" . $formid . "' action='$action' method='post' " .
-               ($ID ? "target='_blank'" : '') . "><table class='tab_cadre_fixe'>";
+        $pdf_class = $PLUGIN_HOOKS['plugin_pdf'][$type];
+        if (!is_a($pdf_class, PluginPdfCommon::class, true)) {
+            return;
+        }
+
+        $itempdf = new $pdf_class($item);
+        $options = $itempdf->defineAllTabsPDF();
 
         $landscape = false;
         $values    = [];
 
-        foreach ($DB->request(
-            $this->getTable(),
-            ['SELECT'   => 'tabref',
-                'WHERE' => ['users_id' => $_SESSION['glpiID'],
-                    'itemtype'         => $type]],
-        ) as $data) {
+        $criterias = [
+            'SELECT' => 'tabref',
+            'FROM'   => $this->getTable(),
+            'WHERE'  => [
+                'users_id' => $_SESSION['glpiID'],
+                'itemtype' => $type,
+            ],
+        ];
+
+        foreach ($DB->request($criterias) as $data) {
             if ($data['tabref'] == 'landscape') {
                 $landscape = true;
             } else {
                 $values[$data['tabref']] = $data['tabref'];
             }
         }
-        // Always export, at least, main part.
+
         if (!count($values) && isset($options[$type . '$main'])) {
             $values[$type . '$main'] = 1;
         }
 
-        echo "<tr><th colspan='6'>" . sprintf(
-            __('%1$s: %2$s'),
-            __('Choose the tables to print in pdf', 'pdf'),
-            $item->getTypeName(),
-        );
-        echo '</th></tr>';
+        $formid = "plugin_pdf_{$type}_" . mt_rand();
 
-        $i = 0;
-        foreach ($options as $num => $title) {
-            if (!$i) {
-                echo "<tr class='tab_bg_1'>";
-            }
-            if ($_SESSION['glpi_use_mode'] == Session::DEBUG_MODE) {
-                $title = "$title ($num)";
-            }
-            $this->checkbox($num, $title, (isset($values[$num]) ? true : false));
-            if ($i == 4) {
-                echo '</tr>';
-                $i = 0;
-            } else {
-                $i++;
-            }
-        }
-        if ($i) {
-            while ($i <= 4) {
-                echo "<td width='20%'>&nbsp;</td>";
-                $i++;
-            }
-            echo '</tr>';
-        }
+        $template_data = [
+            'form_id' => $formid,
+            'action' => $action,
+            'item_id' => $ID,
+            'item_type_name' => $item->getTypeName(),
+            'inventory_type' => $type,
+            'options' => $options,
+            'values' => $values,
+            'landscape' => $landscape,
+            'debug_mode' => $_SESSION['glpi_use_mode'] == Session::DEBUG_MODE,
+        ];
 
-        echo "<tr class='tab_bg_2'><td colspan='2' class='left'>";
-        echo "<a onclick=\"if (markCheckboxes('" . $formid . "') ) return false;\" href='" .
-             $_SERVER['PHP_SELF'] . "?select=all'>" . __('Check all') . '</a> / ';
-        echo "<a onclick=\"if (unMarkCheckboxes('" . $formid . "') ) return false;\" href='" .
-             $_SERVER['PHP_SELF'] . "?select=none'>" . __('Uncheck all') . '</a></td>';
-
-        echo "<td colspan='4' class='center'>";
-        echo Html::hidden('plugin_pdf_inventory_type', ['value' => $type]);
-        echo Html::hidden('indice', ['value' => count($options)]);
-
-        if ($ID) {
-            echo __('Display (number of items)') . '&nbsp;';
-            Dropdown::showListLimit();
-        }
-        echo "<select name='page'>\n";
-        echo "<option value='0'>" . __('Portrait', 'pdf') . "</option>\n"; // Portrait
-        echo "<option value='1'" . ($landscape ? "selected='selected'" : '') . '>' . __('Landscape', 'pdf') .
-             "</option>\n"; // Paysage
-        echo "</select>&nbsp;&nbsp;&nbsp;&nbsp;\n";
-
-        if ($ID) {
-            echo Html::hidden('itemID', ['value' => $ID]);
-            echo Html::submit(_sx('button', 'Print', 'pdf'), ['name' => 'generate',
-                'class'                                              => 'btn btn-primary']);
-        } else {
-            echo Html::submit(_sx('button', 'Save'), ['name' => 'plugin_pdf_user_preferences_save',
-                'class'                                      => 'btn btn-primary',
-                'icon'                                       => 'ti ti-device-floppy']);
-        }
-        echo '</td></tr></table>';
-        Html::closeForm();
+        TemplateRenderer::getInstance()->display('@pdf/preference_form.html.twig', $template_data);
     }
 
     public function getTabNameForItem(CommonGLPI $item, $withtemplate = 0)
     {
         if (($item->getType() == 'Preference')) {
-            return __('Print to pdf', 'pdf');
+            return self::createTabEntry(self::getTypeName(), 0, $item::getType(), PluginPdfConfig::getIcon());
         }
-
         return '';
     }
 
@@ -198,14 +154,15 @@ class PluginPdfPreference extends CommonDBTM
 
     public static function install(Migration $mig)
     {
+        /** @var DBmysql $DB */
         global $DB;
 
         $table = 'glpi_plugin_pdf_preferences';
+        $default_key_sign  = DBConnection::getDefaultPrimaryKeySignOption();
         if (!$DB->tableExists('glpi_plugin_pdf_preference')
             && !$DB->tableExists($table)) {
             $default_charset   = DBConnection::getDefaultCharset();
             $default_collation = DBConnection::getDefaultCollation();
-            $default_key_sign  = DBConnection::getDefaultPrimaryKeySignOption();
 
             $query = 'CREATE TABLE `' . $table . "`(
                   `id` int $default_key_sign NOT NULL AUTO_INCREMENT,
@@ -215,7 +172,7 @@ class PluginPdfPreference extends CommonDBTM
                   PRIMARY KEY (`id`)
                ) ENGINE=InnoDB DEFAULT CHARSET= {$default_charset}
                  COLLATE = {$default_collation} ROW_FORMAT=DYNAMIC";
-            $DB->queryOrDie($query, $DB->error());
+            $DB->doQuery($query);
         } else {
             if ($DB->tableExists('glpi_plugin_pdf_preference')) {
                 $mig->renameTable('glpi_plugin_pdf_preference', 'glpi_plugin_pdf_preferences');
@@ -232,7 +189,7 @@ class PluginPdfPreference extends CommonDBTM
             }
             // 0.6.1
             if ($DB->fieldExists($table, 'FK_users')) {
-                $mig > changeField(
+                $mig->changeField(
                     $table,
                     'FK_users',
                     'users_id',
@@ -269,13 +226,6 @@ class PluginPdfPreference extends CommonDBTM
                     'string',
                     ['comment' => 'ref of tab to display, or plugname_#, or option name'],
                 );
-            }
-            //0.85
-            if (isset($main)) {
-                $query = "UPDATE `glpi_plugin_pdf_preferences`
-                      SET `tabref`= CONCAT(`itemtype`,'$main')
-                      WHERE `tabref`='_main_'";
-                $DB->queryOrDie($query, 'update tabref for main');
             }
         }
     }

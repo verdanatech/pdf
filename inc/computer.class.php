@@ -34,9 +34,9 @@ class PluginPdfComputer extends PluginPdfCommon
 {
     public static $rightname = 'plugin_pdf';
 
-    public function __construct(CommonGLPI $obj = null)
+    public function __construct(?CommonGLPI $obj = null)
     {
-        $this->obj = ($obj ? $obj : new Computer());
+        $this->obj = ($obj ?: new Computer());
     }
 
     public function defineAllTabsPDF($options = [])
@@ -186,25 +186,23 @@ class PluginPdfComputer extends PluginPdfCommon
 
     public static function displayTabContentForPDF(PluginPdfSimplePDF $pdf, CommonGLPI $item, $tab)
     {
-        switch ($tab) {
-            case 'ComputerVirtualMachine$1':
-                PluginPdfComputerVirtualMachine::pdfForComputer($pdf, $item);
-                break;
+        if ($item instanceof Computer) {
+            switch ($tab) {
+                case 'ComputerVirtualMachine$1':
+                    PluginPdfComputerVirtualMachine::pdfForComputer($pdf, $item);
+                    break;
 
-            case 'ComputerAntivirus$1':
-                PluginPdfComputerAntivirus::pdfForComputer($pdf, $item);
-                break;
+                case 'ComputerAntivirus$1':
+                    PluginPdfComputerAntivirus::pdfForComputer($pdf, $item);
+                    break;
 
-            case 'RegistryKey$1':
-                PluginPdfRegistryKey::pdfForComputer($pdf, $item);
-                break;
+                case 'Computer_Item$1':
+                    PluginPdfComputer_Item::pdfForComputer($pdf, $item);
+                    break;
 
-            case 'Computer_Item$1':
-                PluginPdfComputer_Item::pdfForComputer($pdf, $item);
-                break;
-
-            default:
-                return false;
+                default:
+                    return false;
+            }
         }
 
         return true;

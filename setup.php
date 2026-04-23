@@ -33,12 +33,16 @@
  *  --------------------------------------------------------------------------
  */
 
-define('PLUGIN_PDF_VERSION', '4.0.1');
-define('PLUGIN_PDF_MIN_GLPI', '10.0.0');
-define('PLUGIN_PDF_MAX_GLPI', '10.0.99');
+
+
+define('PLUGIN_PDF_VERSION', '4.1.2');
+define('PLUGIN_PDF_MIN_GLPI', '11.0.0');
+define('PLUGIN_PDF_MAX_GLPI', '11.0.99');
 
 function plugin_init_pdf()
 {
+    /** @var array $PDF_DEVICES */
+    /** @var array $PLUGIN_HOOKS */
     global $PLUGIN_HOOKS, $PDF_DEVICES;
 
     $PLUGIN_HOOKS['csrf_compliant']['pdf'] = true;
@@ -107,7 +111,7 @@ function plugin_init_pdf()
 
 function plugin_version_pdf()
 {
-    return ['name'       => __('Print to pdf', 'pdf'),
+    return ['name'       => __s('Print to pdf', 'pdf'),
         'version'        => PLUGIN_PDF_VERSION,
         'author'         => 'Teclib, Remi Collet, Nelly Mahu-Lasson',
         'license'        => 'GPLv3+',
