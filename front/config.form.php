@@ -30,10 +30,10 @@
  *  --------------------------------------------------------------------------
  */
 
-include('../../../inc/includes.php');
+Session::checkLoginUser();
 
 // No autoload when plugin is not activated
-require_once('../inc/config.class.php');
+require_once(__DIR__ . '/../inc/config.class.php');
 
 $config = new PluginPdfConfig();
 if (isset($_POST['update'])) {
@@ -43,5 +43,9 @@ if (isset($_POST['update'])) {
 
     Html::back();
 }
+
+/** @var array $CFG_GLPI */
+global $CFG_GLPI;
+
 Html::redirect($CFG_GLPI['root_doc'] . '/front/config.form.php?forcetab=' .
                urlencode('PluginPdfConfig$1'));

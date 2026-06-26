@@ -34,9 +34,9 @@ class PluginPdfSoftwareVersion extends PluginPdfCommon
 {
     public static $rightname = 'plugin_pdf';
 
-    public function __construct(CommonGLPI $obj = null)
+    public function __construct(?CommonGLPI $obj = null)
     {
-        $this->obj = ($obj ? $obj : new SoftwareVersion());
+        $this->obj = ($obj ?: new SoftwareVersion());
     }
 
     public static function pdfMain(PluginPdfSimplePDF $pdf, SoftwareVersion $version)
@@ -44,15 +44,15 @@ class PluginPdfSoftwareVersion extends PluginPdfCommon
         $ID = $version->getField('id');
 
         $pdf->setColumnsSize(100);
-        $pdf->displayTitle('<b><i>' . sprintf(__('%1$s: %2$s'), __('ID') . '</i>', $ID . '</b>'));
+        $pdf->displayTitle('<b><i>' . sprintf(__s('%1$s: %2$s'), __s('ID') . '</i>', $ID . '</b>'));
 
         $pdf->setColumnsSize(50, 50);
 
         $pdf->displayLine(
-            '<b><i>' . sprintf(__('%1$s: %2$s'), __('Name') . '</i></b>', $version->fields['name']),
+            '<b><i>' . sprintf(__s('%1$s: %2$s'), __s('Name') . '</i></b>', $version->fields['name']),
             '<b><i>' . sprintf(
-                __('%1$s: %2$s'),
-                _n('Software', 'Software', 2) . '</i></b>',
+                __s('%1$s: %2$s'),
+                _sn('Software', 'Software', 2) . '</i></b>',
                 Toolbox::stripTags(Dropdown::getDropdownName(
                     'glpi_softwares',
                     $version->fields['softwares_id'],
@@ -62,16 +62,16 @@ class PluginPdfSoftwareVersion extends PluginPdfCommon
 
         $pdf->displayLine(
             '<b><i>' . sprintf(
-                __('%1$s: %2$s'),
-                __('Status') . '</i></b>',
+                __s('%1$s: %2$s'),
+                __s('Status') . '</i></b>',
                 Toolbox::stripTags(Dropdown::getDropdownName(
                     'glpi_states',
                     $version->fields['states_id'],
                 )),
             ),
             '<b><i>' . sprintf(
-                __('%1$s: %2$s'),
-                __('Operating system') . '</i></b>',
+                __s('%1$s: %2$s'),
+                __s('Operating system') . '</i></b>',
                 Toolbox::stripTags(Dropdown::getDropdownName(
                     'glpi_operatingsystems',
                     $version->fields['operatingsystems_id'],
@@ -86,6 +86,7 @@ class PluginPdfSoftwareVersion extends PluginPdfCommon
 
     public static function pdfForSoftware(PluginPdfSimplePDF $pdf, Software $item)
     {
+        /** @var DBmysql $DB */
         global $DB;
 
         $sID = $item->getField('id');
@@ -109,23 +110,23 @@ class PluginPdfSoftwareVersion extends PluginPdfCommon
         $pdf->setColumnsSize(100);
         $title = '<b>' . SoftwareVersion::getTypeName($number) . '</b>';
 
-        if (!$number) {
-            $pdf->displayTitle(sprintf(__('%1$s: %2$s'), $title, __('No item to display')));
+        if ($number === 0) {
+            $pdf->displayTitle(sprintf(__s('%1$s: %2$s'), $title, __s('No item to display')));
         } else {
             if ($number > $_SESSION['glpilist_limit']) {
-                $title = sprintf(__('%1$s: %2$s'), $title, $_SESSION['glpilist_limit'] . ' / ' . $number);
+                $title = sprintf(__s('%1$s: %2$s'), $title, $_SESSION['glpilist_limit'] . ' / ' . $number);
             } else {
-                $title = sprintf(__('%1$s: %2$s'), $title, $number);
+                $title = sprintf(__s('%1$s: %2$s'), $title, $number);
             }
             $pdf->displayTitle($title);
 
             $pdf->setColumnsSize(13, 13, 30, 14, 30);
             $pdf->displayTitle(
                 '<b><i>' . $title . '</i></b>',
-                '<b><i>' . __('Status') . '</i></b>',
-                '<b><i>' . __('Operating system') . '</i></b>',
-                '<b><i>' . _n('Installation', 'Installations', 2) . '</i></b>',
-                '<b><i>' . __('Comments') . '</i></b>',
+                '<b><i>' . __s('Status') . '</i></b>',
+                '<b><i>' . __s('Operating system') . '</i></b>',
+                '<b><i>' . _sn('Installation', 'Installations', 2) . '</i></b>',
+                '<b><i>' . __s('Comments') . '</i></b>',
             );
             $pdf->setColumnsAlign('left', 'left', 'left', 'right', 'left');
 
@@ -142,24 +143,26 @@ class PluginPdfSoftwareVersion extends PluginPdfCommon
                 $tot += $nb;
             }
             $pdf->setColumnsAlign('left', 'right', 'left', 'right', 'left');
-            $pdf->displayTitle('', '', '<b>' . sprintf(__('%1$s: %2$s'), __('Total') . '</b>', ''), $tot, '');
+            $pdf->displayTitle('', '', '<b>' . sprintf(__s('%1$s: %2$s'), __s('Total') . '</b>', ''), $tot, '');
         }
         $pdf->displaySpace();
     }
 
     public static function displayTabContentForPDF(PluginPdfSimplePDF $pdf, CommonGLPI $item, $tab)
     {
-        switch ($tab) {
-            case 'Item_SoftwareVersion$1':
-                PluginPdfItem_SoftwareVersion::pdfForVersionByEntity($pdf, $item);
-                break;
+        if ($item instanceof SoftwareVersion) {
+            switch ($tab) {
+                case 'Item_SoftwareVersion$1':
+                    PluginPdfItem_SoftwareVersion::pdfForVersionByEntity($pdf, $item);
+                    break;
 
-            case 'Item_SoftwareVersion$2':
-                PluginPdfItem_SoftwareVersion::pdfForSoftware($pdf, $item);
-                break;
+                case 'Item_SoftwareVersion$2':
+                    PluginPdfItem_SoftwareVersion::pdfForSoftware($pdf, $item);
+                    break;
 
-            default:
-                return false;
+                default:
+                    return false;
+            }
         }
 
         return true;

@@ -32,6 +32,8 @@
 
 function plugin_pdf_postinit()
 {
+    /** @var array $CFG_GLPI */
+    /** @var array $PLUGIN_HOOKS */
     global $CFG_GLPI, $PLUGIN_HOOKS;
 
     foreach ($PLUGIN_HOOKS['plugin_pdf'] as $type => $typepdf) {
@@ -42,13 +44,14 @@ function plugin_pdf_postinit()
 
 function plugin_pdf_MassiveActions($type)
 {
+    /** @var array $PLUGIN_HOOKS */
     global $PLUGIN_HOOKS;
 
     switch ($type) {
         default:
             if (isset($PLUGIN_HOOKS['plugin_pdf'][$type])) {
                 return ['PluginPdfCommon' . MassiveAction::CLASS_ACTION_SEPARATOR . 'DoIt'
-                         => __('Print to pdf', 'pdf')];
+                         => '<i class="ti ti-file-type-pdf"></i>' . __s('PDF export', 'pdf')];
             }
     }
 
@@ -58,6 +61,7 @@ function plugin_pdf_MassiveActions($type)
 
 function plugin_pdf_install()
 {
+    /** @var DBmysql $DB */
     global $DB;
 
     $migration = new Migration('3.0.0');
@@ -79,6 +83,7 @@ function plugin_pdf_install()
 
 function plugin_pdf_uninstall()
 {
+    /** @var DBmysql $DB */
     global $DB;
 
     $migration = new Migration('3.0.0');
@@ -94,21 +99,9 @@ function plugin_pdf_uninstall()
     $query = "DELETE
              FROM `glpi_profilerights`
              WHERE `name` = 'plugin_pdf'";
-    $DB->queryOrDie($query, $DB->error());
+    $DB->doQuery($query);
 
     $migration->executeMigration();
 
     return true;
-}
-
-
-/**
- * @since version 1.0.2
-**/
-function plugin_pdf_registerMethods()
-{
-    global $WEBSERVICES_METHOD;
-
-    $WEBSERVICES_METHOD['pdf.getTabs'] = ['PluginPdfRemote', 'methodGetTabs'];
-    $WEBSERVICES_METHOD['pdf.getPdf']  = ['PluginPdfRemote', 'methodGetPdf'];
 }

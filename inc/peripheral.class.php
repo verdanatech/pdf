@@ -34,9 +34,9 @@ class PluginPdfPeripheral extends PluginPdfCommon
 {
     public static $rightname = 'plugin_pdf';
 
-    public function __construct(CommonGLPI $obj = null)
+    public function __construct(?CommonGLPI $obj = null)
     {
-        $this->obj = ($obj ? $obj : new Peripheral());
+        $this->obj = ($obj ?: new Peripheral());
     }
 
     public function defineAllTabsPDF($options = [])
@@ -64,11 +64,11 @@ class PluginPdfPeripheral extends PluginPdfCommon
 
         $pdf->displayLine(
             '<b><i>' . sprintf(
-                __('%1$s: %2$s'),
-                __('Group') . '</i></b>',
+                __s('%1$s: %2$s'),
+                __s('Group') . '</i></b>',
                 Dropdown::getDropdownName('glpi_groups', $item->fields['groups_id']),
             ),
-            '<b><i>' . sprintf(__('%1$s: %2$s'), __('Brand') . '</i></b>', $item->fields['brand']),
+            '<b><i>' . sprintf(__s('%1$s: %2$s'), __s('Brand') . '</i></b>', $item->fields['brand']),
         );
 
         $pdf->setColumnsSize(100);
@@ -83,7 +83,5 @@ class PluginPdfPeripheral extends PluginPdfCommon
             default:
                 return false;
         }
-
-        return true;
     }
 }
