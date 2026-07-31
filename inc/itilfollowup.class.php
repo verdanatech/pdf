@@ -36,7 +36,7 @@ class PluginPdfItilFollowup extends PluginPdfCommon
 
     public function __construct(?CommonGLPI $obj = null)
     {
-        $this->obj = ($obj ? $obj : new ITILFollowup());
+        $this->obj = ($obj ?: new ITILFollowup());
     }
 
     public static function pdfForItem(PluginPdfSimplePDF $pdf, CommonDBTM $item, $private)
@@ -72,29 +72,25 @@ class PluginPdfItilFollowup extends PluginPdfCommon
         $pdf->setColumnsSize(100);
         $title = '<b>' . ITILFollowup::getTypeName(2) . '</b>';
 
-        if (!$number) {
-            $pdf->displayTitle(sprintf(__('%1$s: %2$s'), $title, __('No item to display')));
+        if ($number === 0) {
+            $pdf->displayTitle(sprintf(__s('%1$s: %2$s'), $title, __s('No item to display')));
         } else {
             if ($number > $_SESSION['glpilist_limit']) {
-                $title = sprintf(__('%1$s (%2$s)'), $title, $_SESSION['glpilist_limit'] . '/' . $number);
+                $title = sprintf(__s('%1$s (%2$s)'), $title, $_SESSION['glpilist_limit'] . '/' . $number);
             } else {
-                $title = sprintf(__('%1$s: %2$s'), $title, $number);
+                $title = sprintf(__s('%1$s: %2$s'), $title, $number);
             }
             $pdf->displayTitle($title);
 
             $pdf->setColumnsSize(44, 14, 42);
-            $pdf->displayTitle('<b><i>' . __('Source of followup', 'pdf') . '</i></b>', // Source
-                '<b><i>' . __('Date') . '</i></b>', // Date
-                '<b><i>' . __('Requester') . '</i></b>'); // Author
+            $pdf->displayTitle('<b><i>' . __s('Source of followup', 'pdf') . '</i></b>', // Source
+                '<b><i>' . __s('Date') . '</i></b>', // Date
+                '<b><i>' . __s('Requester') . '</i></b>'); // Author
 
             foreach ($result as $data) {
-                if ($data['requesttypes_id']) {
-                    $lib = Dropdown::getDropdownName('glpi_requesttypes', $data['requesttypes_id']);
-                } else {
-                    $lib = '';
-                }
+                $lib = $data['requesttypes_id'] ? Dropdown::getDropdownName('glpi_requesttypes', $data['requesttypes_id']) : '';
                 if ($data['is_private']) {
-                    $lib = sprintf(__('%1$s (%2$s)'), $lib, __('Private'));
+                    $lib = sprintf(__s('%1$s (%2$s)'), $lib, __s('Private'));
                 }
                 $pdf->displayLine(
                     Toolbox::stripTags($lib),
@@ -102,22 +98,10 @@ class PluginPdfItilFollowup extends PluginPdfCommon
                     Toolbox::stripTags($dbu->getUserName($data['users_id'])),
                 );
 
-
-                $content = Glpi\Toolbox\Sanitizer::unsanitize(Html::entity_decode_deep($data['content']));
-                $content = preg_replace('#data:image/[^;]+;base64,#', '@', $content);
-
-                preg_match_all('/<img [^>]*src=[\'"]([^\'"]*docid=([0-9]*))[^>]*>/', $content, $res, PREG_SET_ORDER);
-
-                foreach ($res as $img) {
-                    $docimg = new Document();
-                    $docimg->getFromDB((int) $img[2]);
-
-                    $path    = '<img src="file://' . GLPI_DOC_DIR . '/' . $docimg->fields['filepath'] . '"/>';
-                    $content = str_replace($img[0], $path, $content);
-                }
+                $content = $data['content'];
 
                 $pdf->displayText(
-                    '<b><i>' . sprintf(__('%1$s: %2$s') . '</i></b>', __('Description'), ''),
+                    '<b><i>' . sprintf(__s('%1$s: %2$s') . '</i></b>', __s('Description'), ''),
                     $content,
                     1,
                 );

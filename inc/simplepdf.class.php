@@ -30,6 +30,8 @@
  *  --------------------------------------------------------------------------
  */
 
+use Glpi\RichText\RichText;
+
 //use TCPDF;
 
 define('K_PATH_IMAGES', '');
@@ -78,7 +80,6 @@ class PluginPdfSimplePDF
         $pdf->SetCreator('GLPI');
         $pdf->SetAuthor('GLPI');
         $font = 'helvetica';
-        $fonsize = 8;
         if (isset($_SESSION['glpipdffont']) && $_SESSION['glpipdffont']) {
             $font = $_SESSION['glpipdffont'];
         }
@@ -129,7 +130,7 @@ class PluginPdfSimplePDF
         ) {
             $this->pdf->SetHeaderData($hook['logo_path'], 15, $msg, '');
         } else {
-            $path = Plugin::getPhpDir('pdf') . '/pics/';
+            $path = Plugin::getPhpDir('pdf') . '/public/pics/';
             $this->pdf->SetHeaderData($path . 'fd_logo.png', 15, $msg, '');
         }
     }
@@ -151,6 +152,9 @@ class PluginPdfSimplePDF
     **/
     public function output($name = false)
     {
+        if (ob_get_level() > 0) {
+            ob_clean();
+        }
         if (!$name) {
             return $this->pdf->Output('glpi.pdf', 'S');
         }
@@ -275,7 +279,7 @@ class PluginPdfSimplePDF
                     $ln = 1; // down
                 }
                 $this->pdf->SetX($this->colsx[$i]);
-                $align = (isset($this->align[$i]) ? $this->align[$i] : $defalign);
+                $align = ($this->align[$i] ?? $defalign);
                 $this->pdf->writeHTMLCell(
                     $this->colsw[$i], // $w (float) Cell width. If 0, the cell extends up to the right margin.
                     $max,             // $h (float) Cell minimum height. The cell extends automatically if needed.
@@ -344,12 +348,81 @@ class PluginPdfSimplePDF
         $save = [$this->cols, $this->colsx, $this->colsw, $this->align];
 
         $this->setColumnsSize(100);
+
         // Decode $content alone: mixing literal HTML from $name breaks isHtmlEncoded(), leaving GLPI entities (&#60;) un-decoded and visible as text in TCPDF.
-        $decoded = Glpi\RichText\RichText::getEnhancedHtml($content ?? '', ['text_maxsize' => 0]);
-        $text    = preg_replace('/<script\b[^>]*>.*?<\/script>/is', '', $name . ' ' . $decoded);
+        $decoded = RichText::getEnhancedHtml($content ?? '', ['text_maxsize' => 0]);
+        $content = preg_replace('/<script\b[^>]*>.*?<\/script>/is', '', $name . ' ' . $decoded);
+
+        // Decode HTML entities BEFORE searching for images
+        $content = html_entity_decode($content, ENT_QUOTES, 'UTF-8');
+
+        preg_match_all(
+            '/<a\b[^>]*>\s*(<img\b[^>]*src=["\']([^"\']*docid=(\d+)[^"\']*)["\'][^>]*>)\s*<\/a>/i',
+            $content,
+            $matches,
+            PREG_SET_ORDER,
+        );
+
+        if ($matches !== []) {
+            $document = new Document();
+            foreach ($matches as $match) {
+                $full_a_tag = $match[0];
+                $full_img_tag = $match[1];
+                $docid = (int) $match[3];
+
+                if ($document->getFromDB($docid) && isset($document->fields['filepath'])) {
+                    $file_path = GLPI_DOC_DIR . '/' . $document->fields['filepath'];
+                    if (file_exists($file_path)) {
+                        // Get actual image dimensions from file
+                        $img_info_actual = @getimagesize($file_path);
+                        $actual_width = 450;  // Default
+                        $actual_height = 300; // Default
+
+                        if ($img_info_actual !== false) {
+                            $actual_width = $img_info_actual[0];
+                            $actual_height = $img_info_actual[1];
+                        }
+
+                        // Extract width and height from the HTML img tag
+                        $html_width = null;
+                        $html_height = null;
+
+                        if (preg_match('/width=["\']?(\d+)["\']?/i', $full_img_tag, $w_match)) {
+                            $html_width = (int) $w_match[1];
+                        }
+                        if (preg_match('/height=["\']?(\d+)["\']?/i', $full_img_tag, $h_match)) {
+                            $html_height = (int) $h_match[1];
+                        }
+
+                        // Calculate display dimensions preserving aspect ratio
+                        $display_width = $html_width ?? $actual_width;
+                        $display_height = $html_height ?? $actual_height;
+
+                        // If only one dimension is specified, calculate the other to preserve ratio
+                        if ($html_width && !$html_height) {
+                            $display_height = (int) ($html_width * $actual_height / $actual_width);
+                        } elseif ($html_height && !$html_width) {
+                            $display_width = (int) ($html_height * $actual_width / $actual_height);
+                        }
+
+                        // Apply maximum width constraint (200 pixels max)
+                        $max_width = 200;
+                        if ($display_width > $max_width) {
+                            $ratio = $max_width / $display_width;
+                            $display_width = $max_width;
+                            $display_height = (int) ($display_height * $ratio);
+                        }
+
+                        // Replace the original image by a properly resized one + remove the a tag
+                        $display_image_tag = '<img src="file://' . $file_path . '" width="' . $display_width . '" height="' . $display_height . '">';
+                        $content = str_replace($full_a_tag, $display_image_tag, $content);
+                    }
+                }
+            }
+        }
 
         // Split content by tables, keeping tables in the result
-        $segments = preg_split('/(<table\b[^>]*>.*?<\/table>)/is', $text, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
+        $segments = preg_split('/(<table\b[^>]*>.*?<\/table>)/is', $content, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
 
         // Process segments and rebuild content
         $formatted_content = '';
@@ -370,12 +443,7 @@ class PluginPdfSimplePDF
         $this->displayInternal(240, 0.5, self::LEFT, $minline * 5, [$formatted_content]);
 
         /* Restore */
-        list(
-            $this->cols,
-            $this->colsx,
-            $this->colsw,
-            $this->align,
-        ) = $save;
+        [$this->cols, $this->colsx, $this->colsw, $this->align, ] = $save;
     }
 
     /**
@@ -403,17 +471,13 @@ class PluginPdfSimplePDF
         // Remove table-layout:fixed style (prevents auto-sizing)
         $html = preg_replace('/table-layout\s*:\s*fixed\s*;?/i', '', $html);
 
-        // Remove ALL width styles from elements (including px, %, em, etc.)
-        $html = preg_replace('/\bwidth\s*:\s*[^;"\'>]+;?/i', '', $html);
+        // Remove width/height styles only from table elements (table, td, th, tr)
+        $html = preg_replace('/(<(?:table|td|th|tr)\b[^>]*)\s+style\s*=\s*["\']([^"\']*)\bwidth\s*:\s*[^;"\'>]+;?([^"\']*)["\']/', '$1 style="$2$3"', $html);
+        $html = preg_replace('/(<(?:table|td|th|tr)\b[^>]*)\s+style\s*=\s*["\']([^"\']*)\bheight\s*:\s*[^;"\'>]+;?([^"\']*)["\']/', '$1 style="$2$3"', $html);
 
-        // Remove ALL height styles from elements
-        $html = preg_replace('/\bheight\s*:\s*[^;"\'>]+;?/i', '', $html);
-
-        // Remove width attributes from any tag
-        $html = preg_replace('/(<[^>]+)\s+width\s*=\s*["\']?[^"\'\s>]+["\']?/i', '$1', $html);
-
-        // Remove height attributes from any tag
-        $html = preg_replace('/(<[^>]+)\s+height\s*=\s*["\']?[^"\'\s>]+["\']?/i', '$1', $html);
+        // Remove width/height attributes only from table elements (table, td, th, tr)
+        $html = preg_replace('/(<(?:table|td|th|tr)\b[^>]+)\s+width\s*=\s*["\']?[^"\'\s>]+["\']?/i', '$1', $html);
+        $html = preg_replace('/(<(?:table|td|th|tr)\b[^>]+)\s+height\s*=\s*["\']?[^"\'\s>]+["\']?/i', '$1', $html);
 
         // Clean up empty style attributes and double spaces
         $html = preg_replace('/\s+style\s*=\s*["\'][\s]*["\']/', '', $html);
@@ -431,27 +495,37 @@ class PluginPdfSimplePDF
     }
 
     /**
-     * Display an image
      *
-     * @param $image String  path of the PNF file
-     * @param $dst_w Intefer Width in Pixels
+     * @param $image String  path of the image file
+     * @param $dst_w Integer Width in Pixels
      * @param $dst_h Integer Height in Pixels
     **/
     public function addPngFromFile($image, $dst_w, $dst_h)
     {
+        // Use absolute path for TCPDF
+        $image_path = $image;
+        if (!file_exists($image_path)) {
+            return; // Skip if file doesn't exist
+        }
+
+        // Use TCPDF's Image() method which supports all formats
         $w = $this->pdf->pixelsToUnits($dst_w);
         $h = $this->pdf->pixelsToUnits($dst_h);
 
-        if ($this->pdf->GetY() + $h - 20 > $this->height) { /* autopagebreak seems broken */
+        if ($this->pdf->GetY() + $h - 20 > $this->height) {
             $this->pdf->AddPage();
         }
+
+        // Image() handles JPEG, PNG, etc automatically
         $this->pdf->Image(
-            $image,
-            '',   // x
-            '',   // y
-            $w,   // $w
-            $h,   // $w
-            'PNG', // type
+            $image_path,  // file or URL
+            '',           // x
+            '',           // y
+            $w,           // width
+            $h,           // height
+            '',           // type (auto-detect)
+            '',           // link
+            'T',          // align
         );
 
         $this->pdf->SetY($this->pdf->GetY() + $h + 2);
