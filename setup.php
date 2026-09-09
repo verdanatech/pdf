@@ -33,9 +33,11 @@
  *  --------------------------------------------------------------------------
  */
 
-define('PLUGIN_PDF_VERSION', '4.0.3');
-define('PLUGIN_PDF_MIN_GLPI', '10.0.11');
-define('PLUGIN_PDF_MAX_GLPI', '10.0.99');
+
+
+define('PLUGIN_PDF_VERSION', '4.1.5');
+define('PLUGIN_PDF_MIN_GLPI', '11.0.0');
+define('PLUGIN_PDF_MAX_GLPI', '11.0.99');
 
 function plugin_init_pdf()
 {
@@ -92,6 +94,7 @@ function plugin_init_pdf()
     $PLUGIN_HOOKS['plugin_pdf']['Printer']          = 'PluginPdfPrinter';
     $PLUGIN_HOOKS['plugin_pdf']['Problem']          = 'PluginPdfProblem';
     $PLUGIN_HOOKS['plugin_pdf']['Software']         = 'PluginPdfSoftware';
+    $PLUGIN_HOOKS['plugin_pdf']['Item_SoftwareVersion'] = 'PluginPdfItem_SoftwareVersion';
     $PLUGIN_HOOKS['plugin_pdf']['SoftwareLicense']  = 'PluginPdfSoftwareLicense';
     $PLUGIN_HOOKS['plugin_pdf']['SoftwareVersion']  = 'PluginPdfSoftwareVersion';
     $PLUGIN_HOOKS['plugin_pdf']['Ticket']           = 'PluginPdfTicket';
@@ -101,15 +104,12 @@ function plugin_init_pdf()
 
     // End init, when all types are registered by all plugins
     $PLUGIN_HOOKS['post_init']['pdf'] = 'plugin_pdf_postinit';
-
-    // Integration with WebService plugin
-    $PLUGIN_HOOKS['webservices']['pdf'] = 'plugin_pdf_registerMethods';
 }
 
 
 function plugin_version_pdf()
 {
-    return ['name'       => __('Print to pdf', 'pdf'),
+    return ['name'       => __s('Print to pdf', 'pdf'),
         'version'        => PLUGIN_PDF_VERSION,
         'author'         => 'Teclib, Remi Collet, Nelly Mahu-Lasson',
         'license'        => 'GPLv3+',

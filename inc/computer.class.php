@@ -30,13 +30,15 @@
  *  --------------------------------------------------------------------------
  */
 
+use Glpi\Asset\Asset_PeripheralAsset;
+
 class PluginPdfComputer extends PluginPdfCommon
 {
     public static $rightname = 'plugin_pdf';
 
     public function __construct(?CommonGLPI $obj = null)
     {
-        $this->obj = ($obj ? $obj : new Computer());
+        $this->obj = ($obj ?: new Computer());
     }
 
     public function defineAllTabsPDF($options = [])
@@ -188,15 +190,7 @@ class PluginPdfComputer extends PluginPdfCommon
     {
         if ($item instanceof Computer) {
             switch ($tab) {
-                case 'ComputerVirtualMachine$1':
-                    PluginPdfComputerVirtualMachine::pdfForComputer($pdf, $item);
-                    break;
-
-                case 'ComputerAntivirus$1':
-                    PluginPdfComputerAntivirus::pdfForComputer($pdf, $item);
-                    break;
-
-                case 'Computer_Item$1':
+                case Asset_PeripheralAsset::class . '$1':
                     PluginPdfComputer_Item::pdfForComputer($pdf, $item);
                     break;
 
