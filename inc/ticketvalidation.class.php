@@ -1,0 +1,108 @@
+<?php
+
+/**
+ *  -------------------------------------------------------------------------
+ *  LICENSE
+ *
+ *  This file is part of PDF plugin for GLPI.
+ *
+ *  PDF is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU Affero General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  PDF is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ *  GNU Affero General Public License for more details.
+ *
+ *  You should have received a copy of the GNU Affero General Public License
+ *  along with Reports. If not, see <http://www.gnu.org/licenses/>.
+ *
+ * @author    Nelly Mahu-Lasson, Remi Collet, Teclib
+ * @copyright Copyright (c) 2009-2022 PDF plugin team
+ * @license   AGPL License 3.0 or (at your option) any later version
+ * @link      https://github.com/pluginsGLPI/pdf/
+ * @link      http://www.glpi-project.org/
+ * @package   pdf
+ * @since     2009
+ *             http://www.gnu.org/licenses/agpl-3.0-standalone.html
+ *  --------------------------------------------------------------------------
+ */
+
+class PluginPdfTicketValidation extends PluginPdfCommon
+{
+    public static $rightname = 'plugin_pdf';
+
+    public function __construct(?CommonGLPI $obj = null)
+    {
+        $this->obj = ($obj ?: new TicketValidation());
+    }
+
+    public static function pdfForTicket(PluginPdfSimplePDF $pdf, Ticket $ticket)
+    {
+        /** @var DBmysql $DB */
+        global $DB;
+
+        $dbu = new DbUtils();
+
+        $pdf->setColumnsSize(100);
+        $pdf->displayTitle('<b>' . __s('Approvals for the ticket', 'pdf') . '</b>');
+
+        if (!Session::haveRightsOr('ticketvalidation', TicketValidation::getValidateRights())) {
+            return false;
+        }
+        $ticket->getField('id');
+
+        $result = $DB->request(
+            ['FROM' => 'glpi_ticketvalidations'] + ['WHERE'    => ['tickets_id' => $ticket->getField('id')],
+                'ORDER' => 'submission_date DESC'],
+        );
+
+        $number = count($result);
+
+        if ($number !== 0) {
+            $pdf->setColumnsSize(20, 19, 21, 19, 21);
+            $pdf->displayTitle(
+                _x('item', 'State'),
+                __s('Request date'),
+                __s('Approval requester'),
+                __s('Approval date'),
+                __s('Approver'),
+            );
+
+            foreach ($result as $row) {
+                $pdf->setColumnsSize(20, 19, 21, 19, 21);
+                $pdf->displayLine(
+                    TicketValidation::getStatus($row['status']),
+                    Html::convDateTime($row['submission_date']),
+                    $dbu->getUserName($row['users_id']),
+                    Html::convDateTime($row['validation_date']),
+                    $dbu->getUserName($row['users_id_validate']),
+                );
+                $tmp = trim(html_entity_decode($row['comment_submission'] ?? '', ENT_QUOTES, 'UTF-8'));
+                $pdf->displayText('<b><i>' . sprintf(
+                    __s('%1$s: %2$s'),
+                    __s('Request comments') . '</i></b>',
+                    '',
+                ), (empty($tmp) ? __s('None') : $tmp), 1);
+
+                if ($row['validation_date']) {
+                    $tmp = trim(html_entity_decode($row['comment_validation'] ?? '', ENT_QUOTES, 'UTF-8'));
+                    $pdf->displayText(
+                        '<b><i>' . sprintf(
+                            __s('%1$s: %2$s'),
+                            __s('Approval comments') . '</i></b>',
+                            '',
+                        ),
+                        (empty($tmp) ? __s('None') : $tmp),
+                        1,
+                    );
+                }
+            }
+        } else {
+            $pdf->displayLine(__s('No item found'));
+        }
+        $pdf->displaySpace();
+    }
+}

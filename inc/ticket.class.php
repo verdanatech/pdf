@@ -1,0 +1,657 @@
+<?php
+
+/**
+ *  -------------------------------------------------------------------------
+ *  LICENSE
+ *
+ *  This file is part of PDF plugin for GLPI.
+ *
+ *  PDF is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU Affero General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  PDF is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ *  GNU Affero General Public License for more details.
+ *
+ *  You should have received a copy of the GNU Affero General Public License
+ *  along with Reports. If not, see <http://www.gnu.org/licenses/>.
+ *
+ * @author    Nelly Mahu-Lasson, Remi Collet, Teclib
+ * @copyright Copyright (c) 2009-2022 PDF plugin team
+ * @license   AGPL License 3.0 or (at your option) any later version
+ * @link      https://github.com/pluginsGLPI/pdf/
+ * @link      http://www.glpi-project.org/
+ * @package   pdf
+ * @since     2009
+ *             http://www.gnu.org/licenses/agpl-3.0-standalone.html
+ *  --------------------------------------------------------------------------
+ */
+
+class PluginPdfTicket extends PluginPdfCommon
+{
+    public static $rightname = 'plugin_pdf';
+
+    public function __construct(?CommonGLPI $obj = null)
+    {
+        $this->obj = ($obj ?: new Ticket());
+    }
+
+    public static function pdfMain(PluginPdfSimplePDF $pdf, Ticket $job)
+    {
+        $dbu = new DbUtils();
+
+        $infouser = isset($_REQUEST['item']['_inforequester_']);
+
+        $ID = $job->getField('id');
+        if (!$job->can($ID, READ)) {
+            return false;
+        }
+
+        $pdf->setColumnsSize(100);
+
+        $pdf->displayTitle('<b>' .
+                 (empty($job->fields['name']) ? __s('Without title') : $name = $job->fields['name']) . '</b>');
+
+        if (count($_SESSION['glpiactiveentities']) > 1) {
+            $entity = ' (' . Dropdown::getDropdownName(
+                'glpi_entities',
+                $job->fields['entities_id'],
+            ) . ')';
+        } else {
+            $entity = '';
+        }
+
+        $pdf->setColumnsSize(50, 50);
+        $recipient_name = '';
+        if ($job->fields['users_id_recipient']) {
+            $recipient = new User();
+            $recipient->getFromDB($job->fields['users_id_recipient']);
+            $recipient_name = $recipient->getName();
+        }
+        $pdf->displayLine(
+            '<b><i>' . sprintf(
+                __s('%1$s: %2$s'),
+                __s('Opening date') . '</i></b>',
+                Html::convDateTime($job->fields['date']),
+            ),
+            '<b><i>' . sprintf(__s('%1$s: %2$s'), __s('By') . '</i></b>', $recipient_name),
+        );
+
+        $ttr = '<b><i>' . sprintf(
+            __s('%1$s: %2$s'),
+            __s('Time to resolve') . '</b></i>',
+            Html::convDateTime($job->fields['time_to_resolve']),
+        );
+
+        $tto = '<b><i>' . sprintf(
+            __s('%1$s: %2$s'),
+            __s('Internal time to own') . '</b></i>',
+            Html::convDateTime($job->fields['internal_time_to_own']),
+        );
+
+        if ($job->fields['olas_id_tto'] > 0) {
+            $tto .= '<b><i>' . sprintf(
+                __s('%1$s: %2$s'),
+                __s('OLA') . '</b></i>',
+                Toolbox::stripTags(Dropdown::getDropdownName(
+                    'glpi_olas',
+                    $job->fields['olas_id_tto'],
+                )),
+            );
+
+            $olalevel   = new OlaLevel();
+            $nextaction = new OlaLevel_Ticket();
+            if ($nextaction->getFromDBForTicket($job->fields['id'], SLM::TTO)) {
+                $tto .= '<br /><b><i>' . sprintf(
+                    __s('%1$s: %2$s'),
+                    sprintf(__s('Next escalation: %s') . '</b></i>', ''),
+                    Html::convDateTime($nextaction->fields['date']),
+                );
+
+                if ($olalevel->getFromDB($nextaction->fields['olalevels_id'])) {
+                    $tto .= ' <b><i>' . sprintf(
+                        __s('%1$s: %2$s'),
+                        __s('Escalation level') . '</b></i>',
+                        $olalevel->getName(),
+                    );
+                }
+            }
+        }
+
+        if ($job->fields['slas_id_ttr'] > 0) {
+            $ttr .= '<b><i>' . sprintf(
+                __s('%1$s: %2$s'),
+                __s('SLA') . '</b></i>',
+                Toolbox::stripTags(Dropdown::getDropdownName(
+                    'glpi_slas',
+                    $job->fields['slas_id_ttr'],
+                )),
+            );
+
+            $slalevel   = new SlaLevel();
+            $nextaction = new SlaLevel_Ticket();
+            if ($nextaction->getFromDBForTicket($job->fields['id'], SLM::TTR)) {
+                $ttr .= '<br /><b><i>' . sprintf(
+                    __s('%1$s: %2$s'),
+                    sprintf(__s('Next escalation: %s') . '</b></i>', ''),
+                    Html::convDateTime($nextaction->fields['date']),
+                );
+
+                if ($slalevel->getFromDB($nextaction->fields['slalevels_id'])) {
+                    $ttr .= ' <b><i>' . sprintf(
+                        __s('%1$s: %2$s'),
+                        __s('Escalation level') . '</b></i>',
+                        $slalevel->getName(),
+                    );
+                }
+            }
+        }
+
+        $pdf->setColumnsSize(50, 50);
+        $lastupdate = Html::convDateTime($job->fields['date_mod']);
+        if ($job->fields['users_id_lastupdater'] > 0) {
+            $lastupdate = sprintf(
+                __s('%1$s by %2$s'),
+                $lastupdate,
+                $dbu->getUserName($job->fields['users_id_lastupdater']),
+            );
+        }
+
+        $pdf->displayLine(
+            '<b><i>' . sprintf(__s('%1$s: %2$s'), __s('Last update') . '</i></b>', $lastupdate),
+        );
+
+        $pdf->displayLine(
+            '<b><i>' . sprintf(
+                __s('%1$s: %2$s'),
+                __s('Time to own') . '</b></i>',
+                Html::convDateTime($job->fields['time_to_own']),
+            ),
+            $ttr,
+        );
+
+        $pdf->displayLine(
+            $tto,
+            '<b><i>' . sprintf(
+                __s('%1$s: %2$s'),
+                __s('Internal time to resolve') . '</b></i>',
+                Html::convDateTime($job->fields['internal_time_to_resolve']),
+            ),
+        );
+
+        $pdf->displayLine(
+            '<b><i>' . sprintf(
+                __s('%1$s: %2$s'),
+                __s('Type') . '</i></b>',
+                Toolbox::stripTags(Ticket::getTicketTypeName($job->fields['type'])),
+            ),
+            '<b><i>' . sprintf(
+                __s('%1$s: %2$s'),
+                __s('Category') . '</i></b>',
+                Dropdown::getDropdownName(
+                    'glpi_itilcategories',
+                    $job->fields['itilcategories_id'],
+                ),
+            ),
+        );
+
+        $status = '';
+        if (in_array($job->fields['status'], $job->getSolvedStatusArray())
+            || in_array($job->fields['status'], $job->getClosedStatusArray())) {
+            $status = sprintf(__s('%1$s %2$s'), '-', Html::convDateTime($job->fields['solvedate']));
+        }
+        if (in_array($job->fields['status'], $job->getClosedStatusArray())) {
+            $status = sprintf(__s('%1$s %2$s'), '-', Html::convDateTime($job->fields['closedate']));
+        }
+
+        if ($job->fields['status'] == Ticket::WAITING) {
+            $status = sprintf(
+                __s('%1$s %2$s'),
+                '-',
+                Html::convDateTime($job->fields['begin_waiting_date']),
+            );
+        }
+
+        $pdf->displayLine(
+            '<b><i>' . sprintf(
+                __s('%1$s: %2$s'),
+                __s('Status') . '</i></b>',
+                Toolbox::stripTags($job->getStatus($job->fields['status'])) . $status,
+            ),
+            '<b><i>' . sprintf(
+                __s('%1$s: %2$s'),
+                __s('Request source') . '</i></b>',
+                Toolbox::stripTags(Dropdown::getDropdownName(
+                    'glpi_requesttypes',
+                    $job->fields['requesttypes_id'],
+                )),
+            ),
+        );
+
+        $pdf->displayLine(
+            '<b><i>' . sprintf(
+                __s('%1$s: %2$s'),
+                __s('Urgency') . '</i></b>',
+                Toolbox::stripTags($job->getUrgencyName($job->fields['urgency'])),
+            ),
+            '<b><i>' . sprintf(
+                __s('%1$s: %2$s'),
+                __s('Approval') . '</i></b>',
+                TicketValidation::getStatus($job->fields['global_validation']),
+            ),
+        );
+
+        $pdf->displayLine(
+            '<b><i>' . sprintf(
+                __s('%1$s: %2$s'),
+                __s('Impact') . '</i></b>',
+                Toolbox::stripTags($job->getImpactName($job->fields['impact'])),
+            ),
+            '<b><i>' . sprintf(
+                __s('%1$s: %2$s'),
+                __s('Location') . '</i></b>',
+                Dropdown::getDropdownName(
+                    'glpi_locations',
+                    $job->fields['locations_id'],
+                ),
+            ),
+        );
+
+        $pdf->displayLine(
+            '<b><i>' . sprintf(
+                __s('%1$s: %2$s'),
+                __s('Priority') . '</i></b>',
+                Toolbox::stripTags($job->getPriorityName($job->fields['priority'])),
+            ),
+        );
+
+        $pdf->setColumnsSize(50, 50);
+
+        // Requester
+        $users     = [];
+        $listusers = '';
+        $requester = '<b><i>' . sprintf(__s('%1$s: %2$s') . '</i></b>', __s('Requester'), $listusers);
+        foreach ($job->getUsers(CommonITILActor::REQUESTER) as $d) {
+            if ($d['users_id']) {
+                $tmp = '<i>' . Toolbox::stripTags($dbu->getUserName($d['users_id'])) . '</i>';
+                if ($d['alternative_email']) {
+                    $tmp .= ' (' . $d['alternative_email'] . ')';
+                }
+            } else {
+                $tmp = $d['alternative_email'];
+            }
+
+            $user = new User();
+            if (($info = $user->getFromDB($d['users_id'])
+                && $infouser) && ($user->fields['phone'] || $user->fields['mobile'] || $user->fields['usercategories_id'] || $user->fields['locations_id'])) {
+                $tmp .= ' (';
+                $first = true;
+                if ($user->fields['phone']) {
+                    $tmp .= sprintf(__s('%1$s: %2$s'), __s('Phone'), $user->fields['phone']);
+                    $first = false;
+                }
+                if ($user->fields['mobile']) {
+                    if (!$first) {
+                        $tmp .= ' - ';
+                    }
+                    $tmp .= sprintf(__s('%1$s: %2$s'), __s('Mobile phone'), $user->fields['mobile']);
+                    $first = false;
+                }
+                if ($user->fields['usercategories_id']) {
+                    if (!$first) {
+                        $tmp .= ' - ';
+                    }
+                    $tmp .= sprintf(
+                        __s('%1$s: %2$s'),
+                        __s('Category'),
+                        Dropdown::getDropdownName(
+                            'glpi_usercategories',
+                            $user->fields['usercategories_id'],
+                        ),
+                    );
+                    $first = false;
+                }
+                if ($user->fields['locations_id']) {
+                    if (!$first) {
+                        $tmp .= ' - ';
+                    }
+                    $tmp .= sprintf(
+                        __s('%1$s: %2$s'),
+                        __s('Location'),
+                        Dropdown::getDropdownName(
+                            'glpi_locations',
+                            $user->fields['locations_id'],
+                        ),
+                    );
+                }
+                $tmp .= ')';
+            }
+            $users[] = $tmp;
+        }
+        if (count($users)) {
+            $listusers = implode('<br /> ', $users);
+        }
+        $pdf->displayText($requester, $listusers, 1);
+
+        $groups         = [];
+        $listgroups     = '';
+        $requestergroup = '<b><i>' . sprintf(
+            __s('%1$s: %2$s') . '</i></b>',
+            __s('Requester group'),
+            $listgroups,
+        );
+        foreach ($job->getGroups(CommonITILActor::REQUESTER) as $d) {
+            $groups[] = Dropdown::getDropdownName('glpi_groups', $d['groups_id']);
+        }
+        if (count($groups)) {
+            $groups = array_filter($groups, 'is_string');
+            $listgroups = implode(', ', $groups);
+        }
+        $pdf->displayText($requestergroup, $listgroups, 1);
+
+        // Observer
+        $users     = [];
+        $listusers = '';
+        $watcher   = '<b><i>' . sprintf(__s('%1$s: %2$s') . '</i></b>', _n('Observer', 'Observers', 1), $listusers);
+        foreach ($job->getUsers(CommonITILActor::OBSERVER) as $d) {
+            if ($d['users_id']) {
+                $tmp = Toolbox::stripTags($dbu->getUserName($d['users_id']));
+                if ($d['alternative_email']) {
+                    $tmp .= ' (' . $d['alternative_email'] . ')';
+                }
+            } else {
+                $tmp = $d['alternative_email'];
+            }
+            $users[] = $tmp;
+        }
+        if (count($users)) {
+            $listusers = implode(', ', $users);
+        }
+        $pdf->displayText($watcher, $listusers, 1);
+
+        $groups       = [];
+        $listgroups   = '';
+        $watchergroup = '<b><i>' . sprintf(
+            __s('%1$s: %2$s') . '</i></b>',
+            _n('Observer group', 'Observer groups', 1),
+            $listgroups,
+        );
+        foreach ($job->getGroups(CommonITILActor::OBSERVER) as $d) {
+            $groups[] = Dropdown::getDropdownName('glpi_groups', $d['groups_id']);
+        }
+        if (count($groups)) {
+            $groups = array_filter($groups, 'is_string');
+            $listgroups = implode(', ', $groups);
+        }
+        $pdf->displayText($watchergroup, $listgroups, 1);
+
+        // Assign to
+        $users     = [];
+        $listusers = '';
+        $assign    = '<b><i>' . sprintf(
+            __s('%1$s: %2$s') . '</i></b>',
+            __s('Assigned to technicians'),
+            $listusers,
+        );
+        foreach ($job->getUsers(CommonITILActor::ASSIGN) as $d) {
+            if ($d['users_id']) {
+                $tmp = Toolbox::stripTags($dbu->getUserName($d['users_id']));
+                if ($d['alternative_email']) {
+                    $tmp .= ' (' . $d['alternative_email'] . ')';
+                }
+            } else {
+                $tmp = $d['alternative_email'];
+            }
+            $users[] = $tmp;
+        }
+        if (count($users)) {
+            $listusers = implode(', ', $users);
+        }
+        $pdf->displayText($assign, $listusers, 1);
+
+        $groups      = [];
+        $listgroups  = '';
+        $assigngroup = '<b><i>' . sprintf(
+            __s('%1$s: %2$s') . '</i></b>',
+            __s('Assigned to groups'),
+            $listgroups,
+        );
+        foreach ($job->getGroups(CommonITILActor::ASSIGN) as $d) {
+            $groups[] = Dropdown::getDropdownName('glpi_groups', $d['groups_id']);
+        }
+        if (count($groups)) {
+            $groups = array_filter($groups, 'is_string');
+            $listgroups = implode(', ', $groups);
+        }
+        $pdf->displayText($assigngroup, $listgroups, 1);
+
+        // Supplier
+        $suppliers      = [];
+        $listsuppliers  = '';
+        $assignsupplier = '<b><i>' . sprintf(
+            __s('%1$s: %2$s') . '</i></b>',
+            __s('Assigned to a supplier'),
+            $listsuppliers,
+        );
+        foreach ($job->getSuppliers(CommonITILActor::ASSIGN) as $d) {
+            $suppliers[] = Toolbox::stripTags(Dropdown::getDropdownName(
+                'glpi_suppliers',
+                $d['suppliers_id'],
+            ));
+        }
+        if (count($suppliers)) {
+            $listsuppliers = implode(', ', $suppliers);
+        }
+        $pdf->displayText($assignsupplier, $listsuppliers, 1);
+
+        $pdf->setColumnsSize(100);
+        $pdf->displayLine(
+            '<b><i>' . sprintf(__s('%1$s: %2$s'), __s('Title') . '</i></b>', $job->fields['name']),
+        );
+
+        $content = $job->fields['content'];
+
+
+        $pdf->displayText(
+            '<b><i>' . sprintf(__s('%1$s: %2$s') . '</i></b>', __s('Description'), ''),
+            $content,
+            1,
+        );
+
+        // Linked tickets
+        $tickets = Ticket_Ticket::getLinkedTo(Ticket::class, $ID);
+        if (count($tickets)) {
+            $ticket = new Ticket();
+            $pdf->displayLine('<b><i>' . sprintf(
+                __s('%1$s: %2$s') . '</i></b>',
+                _sn('Linked ticket', 'Linked tickets', 2),
+                '',
+            ));
+            foreach ($tickets as $linkID => $data) {
+                $tmp = sprintf(
+                    __s('%1$s %2$s'),
+                    Ticket_Ticket::getLinkName($data['link']),
+                    sprintf(__s('%1$s %2$s'), __s('ID'), $data['tickets_id']),
+                );
+                if ($ticket->getFromDB($data['tickets_id'])) {
+                    $tmp = sprintf(__s('%1$s: %2$s'), $tmp, $ticket->getName());
+                }
+                $pdf->displayText('', $tmp, 1);
+            }
+        }
+
+        $pdf->displaySpace();
+    }
+
+    public static function pdfStat(PluginPdfSimplePDF $pdf, Ticket $job)
+    {
+        time();
+        $date_creation        = strtotime($job->fields['date']);
+        $date_takeintoaccount = $date_creation + $job->fields['takeintoaccount_delay_stat'];
+        if ($date_takeintoaccount == $date_creation) {
+            $date_takeintoaccount = 0;
+        }
+
+        $pdf->setColumnsSize(100);
+        $pdf->displayTitle('<b>' . _sn('Date', 'Dates', 2) . '</b>');
+
+        $pdf->setColumnsSize(50, 50);
+        $pdf->setColumnsAlign('right', 'left');
+
+        $pdf->displayLine(Html::convDateTime($job->fields['date']), __s('Opening date'));
+
+        if (!empty($job->fields['internal_time_to_own'])) {
+            $pdf->displayLine(
+                Html::convDateTime($job->fields['internal_time_to_own']),
+                __s('Internal time to own'),
+            );
+        }
+        if (!empty($job->fields['takeintoaccount_delay_stat'])) {
+            $pdf->displayLine(
+                Html::convDateTime(date('Y-m-d H:i:s', $date_takeintoaccount)),
+                __s('Take into account'),
+            );
+        }
+        if (!empty($job->fields['time_to_own'])) {
+            $pdf->displayLine(Html::convDateTime($job->fields['time_to_own']), __s('Time to own'));
+        }
+        if (!empty($job->fields['internal_time_to_resolve'])) {
+            $pdf->displayLine(
+                Html::convDateTime($job->fields['internal_time_to_resolve']),
+                __s('Internal time to resolve'),
+            );
+        }
+        if (!empty($job->fields['time_to_resolve'])) {
+            $pdf->displayLine(
+                Html::convDateTime($job->fields['time_to_resolve']),
+                __s('Time to resolve'),
+            );
+        }
+        if (in_array($job->fields['status'], $job->getSolvedStatusArray())
+            || in_array($job->fields['status'], $job->getClosedStatusArray())) {
+            $pdf->displayLine(Html::convDateTime($job->fields['solvedate']), __s('Resolution date'));
+        }
+        if (in_array($job->fields['status'], $job->getClosedStatusArray())) {
+            $pdf->displayLine(Html::convDateTime($job->fields['closedate']), __s('Closing date'));
+        }
+
+        $pdf->setColumnsSize(100);
+        $pdf->displayTitle('<b>' . _sn('Time', 'Times', 2) . '</b>');
+
+        $pdf->setColumnsSize(50, 50);
+        if ($job->fields['takeintoaccount_delay_stat'] > 0) {
+            $pdf->displayLine(
+                __s('Take into account'),
+                Toolbox::stripTags(Html::timestampToString($job->fields['takeintoaccount_delay_stat'], false)),
+            );
+        }
+
+        if ((in_array($job->fields['status'], $job->getSolvedStatusArray()) || in_array($job->fields['status'], $job->getClosedStatusArray())) && $job->fields['solve_delay_stat'] > 0) {
+            $pdf->displayLine(
+                __s('Solution'),
+                Toolbox::stripTags(Html::timestampToString($job->fields['solve_delay_stat'], false)),
+            );
+        }
+        if (in_array($job->fields['status'], $job->getClosedStatusArray()) && $job->fields['close_delay_stat'] > 0) {
+            $pdf->displayLine(
+                __s('Closing'),
+                Toolbox::stripTags(Html::timestampToString($job->fields['close_delay_stat'], true)),
+            );
+        }
+        if ($job->fields['waiting_duration'] > 0) {
+            $pdf->displayLine(
+                __s('Pending'),
+                Toolbox::stripTags(Html::timestampToString($job->fields['waiting_duration'], false)),
+            );
+        }
+
+        $pdf->displaySpace();
+    }
+
+    public function defineAllTabsPDF($options = [])
+    {
+        $onglets = parent::defineAllTabsPDF($options);
+        unset($onglets['ProjectTask_Ticket$1']);
+        unset($onglets['Itil_Project$1']);
+
+        if (Session::haveRight('ticket', Ticket::READALL) // for technician
+            || Session::haveRight('followup', ITILFollowup::SEEPRIVATE)
+            || Session::haveRight('task', TicketTask::SEEPRIVATE)) {
+            $onglets['_private_'] = __s('Private');
+        }
+
+        if (Session::haveRight('user', READ)) {
+            $onglets['_inforequester_'] = __s('Requester information', 'pdf');
+        }
+
+        return $onglets;
+    }
+
+    public static function displayTabContentForPDF(PluginPdfSimplePDF $pdf, CommonGLPI $item, $tab)
+    {
+        $private = isset($_REQUEST['item']['_private_']);
+
+        if ($item instanceof Ticket) {
+            switch ($tab) {
+                case '_private_':
+                    // nothing to export, just a flag
+                    break;
+
+                case '_inforequester_':
+                    break;
+
+                case 'Ticket$main': // 0.90+
+                    self::pdfMain($pdf, $item);
+                    PluginPdfItilFollowup::pdfForItem($pdf, $item, $private);
+                    PluginPdfTicketTask::pdfForTicket($pdf, $item, $private);
+                    if (Session::haveRight('document', READ)) {
+                        PluginPdfDocument::pdfForItem($pdf, $item);
+                    }
+                    PluginPdfITILSolution::pdfForItem($pdf, $item);
+                    break;
+
+                case 'TicketValidation$1': // 0.85
+                    PluginPdfTicketValidation::pdfForTicket($pdf, $item);
+                    break;
+
+                case 'TicketCost$1':
+                    PluginPdfCommonItilCost::pdfForItem($pdf, $item);
+                    break;
+
+                case 'Ticket$3':
+                    PluginPdfTicketSatisfaction::pdfForTicket($pdf, $item);
+                    break;
+
+                case 'Problem_Ticket$1':
+                    PluginPdfProblem_Ticket::pdfForTicket($pdf, $item);
+                    break;
+
+                case 'Ticket$4':
+                    self::pdfStat($pdf, $item);
+                    break;
+
+                case 'Item_Ticket$1':
+                    PluginPdfItem_Ticket::pdfForTicket($pdf, $item);
+                    break;
+
+                case 'Change_Ticket$1':
+                    if (Change::canView()) {
+                        PluginPdfChange_Ticket::pdfForTicket($pdf, $item);
+                    }
+                    break;
+
+                case 'Ticket_Contract$1':
+                    PluginPdfTicket_Contract::pdfForTicket($pdf, $item);
+                    break;
+
+                default:
+                    return false;
+            }
+        }
+
+        return true;
+    }
+}
